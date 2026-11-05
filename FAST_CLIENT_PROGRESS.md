@@ -14,3 +14,5 @@
 
 ## Next engineering dependency
 Implement and validate a version-pinned Bedrock/RenderDragon native hook that filters chunk section draws using the portable visibility graph. Unknown or transparent geometry must fail open.
+
+Build verification: the new icon pack and the C++ visibility-core test are included in Android CI. The APK remains unverified until CI finishes.
