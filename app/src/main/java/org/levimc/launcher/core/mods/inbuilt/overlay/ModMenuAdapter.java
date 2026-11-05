@@ -2,6 +2,8 @@ package org.levimc.launcher.core.mods.inbuilt.overlay;
 
 import android.content.res.ColorStateList;
 import android.graphics.Typeface;
+import android.graphics.ColorMatrixColorFilter;
+import android.graphics.drawable.BitmapDrawable;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -30,6 +32,19 @@ public class ModMenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     private static final int VIEW_TYPE_GROUP = 0;
     private static final int VIEW_TYPE_MOD = 1;
     private static final int VIEW_TYPE_MOD_COMPACT = 2;
+
+    // Original inbuilt icons are grayscale PNGs: gray button + black symbol.
+    // Tinting the entire PNG solid red erased its black symbol (red squares).
+    // A channel-wise filter turns ONLY the gray shades into ruby shades while
+    // pure black remains black and transparency remains transparent.
+    private static final ColorMatrixColorFilter RUBY_GRAYSCALE_ICON =
+        new ColorMatrixColorFilter(new float[] {
+            1.72f, 0f, 0f, 0f, 0f,
+            0f, 0.30f, 0f, 0f, 0f,
+            0f, 0f, 0.43f, 0f, 0f,
+            0f, 0f, 0f, 1f, 0f
+        });
+    private static final ColorStateList BLACK_ICON = ColorStateList.valueOf(0xFF000000);
 
     private final List<MenuItem> items = new ArrayList<>();
     private final Map<String, Boolean> toggleStates = new HashMap<>();
@@ -181,15 +196,12 @@ public class ModMenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             }
         }
 
-        if (mod.getSource() == UnifiedMod.Source.INBUILT) {
-            modHolder.icon.setImageResource(ModIconHelper.getModIcon(mod.getId()));
-            modHolder.icon.setImageTintList(android.content.res.ColorStateList.valueOf(0xFFEF4444));
-            modHolder.icon.clearColorFilter();
-        } else {
-            modHolder.icon.setImageResource(R.drawable.ic_modules);
-            modHolder.icon.setImageTintList(null);
-            modHolder.icon.setColorFilter(null);
-        }
+        // Keep every icon's original symbol. PNG button backgrounds become ruby
+        // with black symbols; transparent vector icons get a ruby backdrop.
+        int iconRes = mod.getSource() == UnifiedMod.Source.INBUILT
+            ? ModIconHelper.getModIcon(mod.getId())
+            : R.drawable.ic_modules;
+        applyOriginalIconColors(modHolder.icon, iconRes);
 
         boolean isEnabled = toggleStates.getOrDefault(mod.getStableKey(), false);
         updateStatusView(modHolder, isEnabled);
@@ -237,6 +249,29 @@ public class ModMenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         return compactMode ? VIEW_TYPE_MOD_COMPACT : VIEW_TYPE_MOD;
     }
 
+    private static void applyOriginalIconColors(ImageView iconView, int iconRes) {
+        iconView.setImageResource(iconRes);
+        iconView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        iconView.setImageTintList(null);
+        iconView.clearColorFilter();
+
+        if (iconView.getDrawable() instanceof BitmapDrawable) {
+            // Raster icons already contain their original square background;
+            // recolor its gray pixels without touching the black sword/controls.
+            iconView.setBackground(null);
+            iconView.setPadding(0, 0, 0, 0);
+            iconView.setColorFilter(RUBY_GRAYSCALE_ICON);
+        } else {
+            // SVG/vector-only icons have no built-in button background.
+            // Use a separate red background and a black original silhouette.
+            int paddingPx = Math.round(iconView.getResources()
+                .getDisplayMetrics().density * 3f);
+            iconView.setBackgroundResource(R.drawable.bg_mod_icon_ruby);
+            iconView.setPadding(paddingPx, paddingPx, paddingPx, paddingPx);
+            iconView.setImageTintList(BLACK_ICON);
+        }
+    }
+
     private void updateFavoriteView(ModViewHolder holder, boolean favorite) {
         int color = favorite ? 0xFFFFC107 : 0xFFA8B0B8;
         holder.favoriteBtn.setImageTintList(ColorStateList.valueOf(color));
@@ -267,7 +302,7 @@ public class ModMenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     private void updateCardState(ModViewHolder holder, boolean enabled) {
         holder.itemView.setAlpha(1f);
-        holder.icon.setAlpha(enabled ? 1f : 0.8f);
+        holder.icon.setAlpha(1f);
         holder.name.setTextColor(enabled ? 0xFFF1F4F6 : 0xFFD6DCE2);
         
         if (holder.itemView instanceof androidx.cardview.widget.CardView) {

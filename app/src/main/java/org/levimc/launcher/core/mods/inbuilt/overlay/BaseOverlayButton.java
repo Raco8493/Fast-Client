@@ -263,7 +263,7 @@ public abstract class BaseOverlayButton {
     private void refreshHudEditorBackground() {
         if (overlayView != null) {
             if (isHudEditorMode) {
-                overlayView.setBackgroundColor(isHudEditorSelected ? 0x664AE0A0 : 0x44FFFFFF);
+                overlayView.setBackgroundColor(isHudEditorSelected ? 0x66EF4444 : 0x44FFFFFF);
             } else if (overlayView instanceof ImageButton
                     && !(this instanceof MoreButtonOverlay)) {
                 // Restore the ruby button after exiting HUD edit mode.

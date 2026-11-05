@@ -1216,7 +1216,7 @@ public class ModMenuOverlay {
         view.setAlpha(1f);
         Drawable background = view.getBackground();
         if (background != null) {
-            background.mutate().setTint(selected ? 0x334AE0A0 : 0xFF24282C);
+            background.mutate().setTint(selected ? 0x33EF4444 : 0xFF24282C);
         }
     }
 

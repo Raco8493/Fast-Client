@@ -30,3 +30,9 @@ Build verification: the new icon pack and the C++ visibility-core test are inclu
 - The menu's separate Fast Client red ruby branding stays intact.
 - This does not add or enable native Minecraft cave renderer hooks. True Cave Culling is still not integrated into RenderDragon.
 - Android CI needs to succeed before a new APK is available; tests on a device are still pending.
+
+## Fix: red squares in the game Mod Menu
+- Original raster icons are grayscale square button images with BLACK silhouettes (sprint, gyro, zoom, CPS/FPS, etc.).
+- Removed the flat red image tint which erased the silhouettes. Their gray shades now map to ruby red through a ColorMatrix while pure black remains pure black, including pressed and disabled state.
+- Transparent vector icons use their ORIGINAL shapes, tinted black above a separate red square. Dark card backgrounds and original layout remain.
+- Cave visibility core still needs Minecraft-specific native renderer integration. No active True Cave Culling is claimed.
