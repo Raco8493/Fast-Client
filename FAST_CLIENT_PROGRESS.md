@@ -1,28 +1,16 @@
-# Fast Client — implementation status
+# Fast Client status
 
-This fork customizes LeviLaunchroid for Android (ARM64).
+## Implemented
+- Fast Client launcher name and red gem adaptive icon
+- Branded red gem splash, navigation, and the draggable in-game Mod Menu button
+- Red theme, 59 custom navigation and utility vector icons and in-game mod status styling
+- Working Android CI artifact flow for installable debug APK, provided the workflow succeeds
+- Portable C++ 16³-section flood-fill portal visibility engine with tests run in CI
 
-## Implemented in this commit
+## Not implemented
+- **True Cave Culling in Minecraft itself**: no renderer hook and therefore no gameplay benefit from the new portable core yet. UI explicitly identifies this missing integration.
+- Runtime validation on an Android device.
+- Complete replacement of third-party service logos and every raster game asset (these are intentionally retained for legibility and to preserve product identity).
 
-- Fast Client's existing in-game movable mod-menu circle now uses a small red-gem vector drawable.
-- The existing in-game Mod Menu retains its working click/drag/menu logic and is styled with red accents and Fast Client branding.
-- Android adaptive icon foreground uses the red gem vector, so it no longer requires replacing every density-specific PNG manually.
-- Android CI now attempts a real debug APK build even when the Firebase secret is not configured, and uploads the result as `FastClient-debug-apk` if the build succeeds.
-- Debug build disables Crashlytics symbol/mapping upload.
-
-## Not yet implemented or verified
-
-- True Cave Culling is NOT hooked into Minecraft's native renderer. No menu item falsely claims it is working.
-- GitHub Actions and physical Android device installation/runtime tests must succeed before this build can be called tested.
-- If Firebase is absent, CI uses a placeholder configuration. This is a development build, not a production release; Firebase-dependent features may be unavailable.
-- Minecraft Bedrock must be a compatible, legally owned Google Play installation.
-
-## Where the real game overlay already lives
-
-- Floating draggable button: `app/src/main/java/org/levimc/launcher/core/mods/inbuilt/overlay/ModMenuButton.java`
-- In-game menu: `ModMenuOverlay.java` and `app/src/main/res/layout/overlay_mod_menu.xml`
-- Native rendering optimization must be a separate tested integration compatible with the current Minecraft binary; a launcher UI toggle alone cannot suppress cave drawing.
-
-## Testing
-
-Open the **Actions** tab, inspect the Android CI run, and download `FastClient-debug-apk` only if a successful build has produced it.
+## Next engineering dependency
+Implement and validate a version-pinned Bedrock/RenderDragon native hook that filters chunk section draws using the portable visibility graph. Unknown or transparent geometry must fail open.

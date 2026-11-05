@@ -1,9 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24.0"
-    android:viewportHeight="24.0">
-    <path
-        android:fillColor="@color/qa_icon_color"
-        android:pathData="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"/>
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+  <path android:fillColor="#7F1325" android:pathData="M12,1 L23,12 L12,23 L1,12 Z"/>
+  <path android:fillColor="#E11D48" android:pathData="M12,3 L21,12 L12,21 L3,12 Z"/>
+  <path android:fillColor="#FB7185" android:pathData="M12,3 L3,12 L12,9 Z"/>
+  <path android:fillColor="@android:color/transparent"
+      android:strokeColor="#FFF1F2" android:strokeWidth="1.7"
+      android:strokeLineCap="round" android:strokeLineJoin="round"
+      android:pathData="M12,7 A3,3 0,1 1,12 13 A3,3 0,1 1,12 7"/>
+  <path android:fillColor="@android:color/transparent"
+      android:strokeColor="#FFF1F2" android:strokeWidth="1.7"
+      android:strokeLineCap="round" android:strokeLineJoin="round"
+      android:pathData="M7,18 C7,13 17,13 17,18"/>
 </vector>

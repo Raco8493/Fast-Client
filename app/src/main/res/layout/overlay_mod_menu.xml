@@ -51,6 +51,31 @@
                     android:textSize="12sp"
                     android:textStyle="bold" />
 
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_marginBottom="12dp"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_mod_menu_toggle"
+                    android:padding="9dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="TRUE CAVE CULLING"
+                        android:textColor="#FDA4AF"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Renderer hook not installed"
+                        android:textColor="#FFE4E6"
+                        android:textSize="9sp" />
+                </LinearLayout>
+
                 <TextView
                     android:id="@+id/nav_modules"
                     android:layout_width="match_parent"
@@ -771,7 +796,7 @@
                                 <ImageView
                                     android:layout_width="24dp"
                                     android:layout_height="24dp"
-                                    android:src="@drawable/ic_leaf_logo"
+                                    android:src="@drawable/ic_fast_client_gem"
                                     android:tint="#888888" />
 
                                 <TextView

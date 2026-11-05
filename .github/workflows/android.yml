@@ -24,6 +24,12 @@ jobs:
       - name: Validate release content
         run: python3 scripts/validate_release_content.py
 
+      - name: Unit test True Cave Culling visibility core
+        run: |
+          c++ -std=c++17 -O2 -Wall -Wextra -Iexamples/cave-culling-core/include \
+            examples/cave-culling-core/tests/visibility_test.cpp -o /tmp/cave_visibility_test
+          /tmp/cave_visibility_test
+
       - name: Prepare google-services.json
         env:
           GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}

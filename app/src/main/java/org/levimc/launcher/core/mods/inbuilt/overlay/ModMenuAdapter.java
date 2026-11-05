@@ -183,8 +183,8 @@ public class ModMenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
         if (mod.getSource() == UnifiedMod.Source.INBUILT) {
             modHolder.icon.setImageResource(ModIconHelper.getModIcon(mod.getId()));
-            modHolder.icon.setImageTintList(null);
-            modHolder.icon.setColorFilter(null);
+            modHolder.icon.setImageTintList(android.content.res.ColorStateList.valueOf(0xFFFDA4AF));
+            modHolder.icon.clearColorFilter();
         } else {
             modHolder.icon.setImageResource(R.drawable.ic_modules);
             modHolder.icon.setImageTintList(null);
