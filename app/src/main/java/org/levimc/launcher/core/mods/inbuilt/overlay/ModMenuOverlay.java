@@ -173,7 +173,7 @@ public class ModMenuOverlay {
     }
 
     private int getAccentColor() {
-        return 0xFF4AE0A0;
+        return 0xFFEF4444;
     }
     
     public interface ModMenuCallback {

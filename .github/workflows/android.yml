@@ -140,15 +140,14 @@ jobs:
         if: env.HAS_GOOGLE_SERVICES == 'true'
         run: ./gradlew assembleDebug assembleBeta assembleRelease
 
-      - name: Compile Debug Without Firebase Secrets
+      - name: Build installable Debug APK Without Firebase Secrets
         if: env.HAS_GOOGLE_SERVICES == 'false'
-        run: ./gradlew :app:compileDebugKotlin :app:compileDebugJavaWithJavac
+        run: ./gradlew :app:assembleDebug
 
-      - name: Upload Debug APK
-        if: env.HAS_GOOGLE_SERVICES == 'true'
+      - name: Upload Fast Client Debug APK
         uses: actions/upload-artifact@v4.6.2
         with:
-          name: LeviLauncher-debug-apk
+          name: FastClient-debug-apk
           path: app/build/outputs/apk/debug/*.apk
 
       - name: Upload R8 mappings
