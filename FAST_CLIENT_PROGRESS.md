@@ -22,3 +22,11 @@ Build verification: the new icon pack and the C++ visibility-core test are inclu
 - Only black/green vector accents were converted to ruby red where applicable. White/light foregrounds remain for accessible contrast.
 - The red gem remains the Fast Client brand/logo and floating menu identity.
 - Cave Culling remains experimental visibility-core code with no Minecraft RenderDragon renderer hook yet.
+
+## Black-on-red button revision
+
+- In-game custom More Buttons (including a sword SVG when configured) now use the **original button shape**, recolored **red only in its background**, with the **original SVG silhouette drawn in black** in both released and pressed states.
+- Built-in floating button symbols use the original art tinted black on a red oval button; the main launcher background stays black and its surfaces remain dark.
+- The menu's separate Fast Client red ruby branding stays intact.
+- This does not add or enable native Minecraft cave renderer hooks. True Cave Culling is still not integrated into RenderDragon.
+- Android CI needs to succeed before a new APK is available; tests on a device are still pending.

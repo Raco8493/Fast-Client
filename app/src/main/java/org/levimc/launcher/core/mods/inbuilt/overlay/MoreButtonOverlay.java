@@ -4,6 +4,10 @@ import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.Rect;
 import android.view.KeyEvent;
 import android.widget.ImageButton;
@@ -46,6 +50,14 @@ public final class MoreButtonOverlay extends BaseOverlayButton {
     @Override
     protected void configureOverlayView(android.view.View view) {
         rebuildBitmaps();
+        // The custom SVG is composited with its red base; never tint the whole bitmap.
+        if (view instanceof ImageButton) {
+            ImageButton button = (ImageButton) view;
+            button.setBackgroundColor(Color.TRANSPARENT);
+            button.setImageTintList(null);
+            button.clearColorFilter();
+            button.setPadding(0, 0, 0, 0);
+        }
         updateVisual();
         view.setContentDescription(config.name);
     }
@@ -122,6 +134,8 @@ public final class MoreButtonOverlay extends BaseOverlayButton {
     private void updateVisual() {
         if (!(overlayView instanceof ImageButton)) return;
         ImageButton button = (ImageButton) overlayView;
+        button.setImageTintList(null);
+        button.clearColorFilter();
         button.setImageBitmap(active ? pressedBitmap : normalBitmap);
         button.setScaleType(ImageButton.ScaleType.FIT_CENTER);
         button.setAlpha(getButtonOpacity());
@@ -145,17 +159,23 @@ public final class MoreButtonOverlay extends BaseOverlayButton {
         Bitmap base = BitmapFactory.decodeResource(activity.getResources(),
                 pressed ? R.drawable.more_button_base_pressed : R.drawable.more_button_base_normal);
         if (base == null) return Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888);
-        Bitmap output = base.copy(Bitmap.Config.ARGB_8888, true);
-        if (base != output && !base.isRecycled()) base.recycle();
+        // Preserve the exact original button outline and alpha (including antialiasing).
+        // Only recolor its background: the icon is drawn separately in solid black.
+        Bitmap output = Bitmap.createBitmap(base.getWidth(), base.getHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(output);
+        Paint rubyBackground = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        rubyBackground.setColorFilter(new PorterDuffColorFilter(
+                pressed ? Color.rgb(166, 25, 42) : Color.rgb(220, 38, 55),
+                PorterDuff.Mode.SRC_IN));
+        canvas.drawBitmap(base, 0, 0, rubyBackground);
+        base.recycle();
 
         boolean hasPressedSvg = config.pressedSvg != null && !config.pressedSvg.trim().isEmpty();
         String svg = pressed && hasPressedSvg ? config.pressedSvg : config.normalSvg;
         if (svg == null || svg.trim().isEmpty()) return output;
 
-        boolean keepColors = pressed ? config.keepPressedColors : config.keepNormalColors;
-        if (!keepColors) {
-            svg = MoreButtonsManager.recolorSvg(svg, pressed ? "#E6E6E6" : "#000000");
-        }
+        // Keep the original SVG geometry (sword, sprint, etc.) black in both states.
+        svg = MoreButtonsManager.recolorSvg(svg, "#000000");
 
         int iconSize = Math.max(96, Math.min(410, Math.round(512f * config.iconScale / 100f)));
         byte[] png = MoreButtonsSvgBridge.renderSvg(svg, iconSize, iconSize);
@@ -165,7 +185,6 @@ public final class MoreButtonOverlay extends BaseOverlayButton {
 
         int left = (512 - iconSize) / 2 + config.iconOffsetX;
         int top = (512 - iconSize) / 2 + config.iconOffsetY + (pressed ? 8 : 0);
-        Canvas canvas = new Canvas(output);
         canvas.drawBitmap(icon, null, new Rect(left, top, left + iconSize, top + iconSize), null);
         icon.recycle();
         return output;

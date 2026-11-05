@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#4AE0A0</color>
+    <color name="primary">#DC2637</color>
     <color name="on_primary">#000000</color>
 
-    <color name="secondary">#00FFFF</color>
+    <color name="secondary">#EF4444</color>
     <color name="on_secondary">#000000</color>
 
-    <color name="primary_container">#1A3A2A</color>
-    <color name="on_primary_container">#4AE0A0</color>
+    <color name="primary_container">#36151C</color>
+    <color name="on_primary_container">#DC2637</color>
 
-    <color name="tertiary">#81D4FA</color>
+    <color name="tertiary">#FB7185</color>
     <color name="on_tertiary">#000000</color>
     <color name="external_mod_ad">#FFB74D</color>
 
@@ -28,13 +28,13 @@
     <color name="white">#FFFFFF</color>
     <color name="scrim">#99000000</color>
 
-    <color name="glow_green">#4AE0A0</color>
-    <color name="glow_cyan">#00FFFF</color>
+    <color name="glow_green">#DC2637</color>
+    <color name="glow_cyan">#EF4444</color>
 
     <color name="abi_label_text">#FFFFFF</color>
-    <color name="accent_text">#4AE0A0</color>
+    <color name="accent_text">#DC2637</color>
 
     <color name="text_primary">#FFFFFF</color>
     <color name="text_secondary">#AAAAAA</color>
-    <color name="qa_icon_color">#FFFFFF</color>
+    <color name="qa_icon_color">#000000</color>
 </resources>

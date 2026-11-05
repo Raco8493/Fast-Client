@@ -264,7 +264,12 @@ public abstract class BaseOverlayButton {
         if (overlayView != null) {
             if (isHudEditorMode) {
                 overlayView.setBackgroundColor(isHudEditorSelected ? 0x664AE0A0 : 0x44FFFFFF);
+            } else if (overlayView instanceof ImageButton
+                    && !(this instanceof MoreButtonOverlay)) {
+                // Restore the ruby button after exiting HUD edit mode.
+                overlayView.setBackgroundResource(R.drawable.bg_overlay_button);
             } else {
+                // The custom MoreButtonOverlay bitmap already has a ruby background.
                 overlayView.setBackgroundColor(Color.TRANSPARENT);
             }
         }
