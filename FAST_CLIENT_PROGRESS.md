@@ -16,3 +16,9 @@
 Implement and validate a version-pinned Bedrock/RenderDragon native hook that filters chunk section draws using the portable visibility graph. Unknown or transparent geometry must fail open.
 
 Build verification: the new icon pack and the C++ visibility-core test are included in Android CI. The APK remains unverified until CI finishes.
+
+## Icon revision requested by owner
+- Restored the original shapes of 60 internal vector icons from pre-redesign commit d78b4f0; no diamond-shaped background is forced onto internal navigation or action icons.
+- Only black/green vector accents were converted to ruby red where applicable. White/light foregrounds remain for accessible contrast.
+- The red gem remains the Fast Client brand/logo and floating menu identity.
+- Cave Culling remains experimental visibility-core code with no Minecraft RenderDragon renderer hook yet.
