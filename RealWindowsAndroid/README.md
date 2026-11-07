@@ -21,16 +21,18 @@
 ## Android setup (first time)
 
 1. Install Termux and open it.
-2. Download `RealWindowsAndroid-source.zip` from this repository and place it in the Android Downloads folder.
-3. In Termux type:
+2. In Termux fetch only this project's folder from the GitHub branch:
 
    ```sh
-   pkg update -y && pkg install -y unzip
+   pkg update -y && pkg install -y git
+   git clone --depth 1 --filter=blob:none --sparse -b real-windows-android-qemu https://github.com/Raco8493/Fast-Client.git ~/realwin-source
+   git -C ~/realwin-source sparse-checkout set RealWindowsAndroid
+   bash ~/realwin-source/RealWindowsAndroid/termux/install.sh
    termux-setup-storage
-   unzip ~/storage/downloads/RealWindowsAndroid-source.zip -d ~
-   bash ~/RealWindowsAndroid/termux/install.sh
    ~/winvm/winvm.sh init 64
    ```
+
+   Alternatively, use the `RealWindowsAndroid-source.zip` attached in this chat: extract it into the Termux home directory and run `bash ~/RealWindowsAndroid/termux/install.sh`.
 
 4. Copy your licensed Windows installation ISO into Android Downloads and **rename it** to `Windows.iso` if necessary. Then:
 
