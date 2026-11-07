@@ -1,5 +1,6 @@
 package com.phonecraft.host;
 
+import android.app.ActivityManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
