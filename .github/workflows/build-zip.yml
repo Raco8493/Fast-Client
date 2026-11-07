@@ -1,0 +1,31 @@
+name: Build PhoneCraft source distribution
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Build source ZIP (no Minecraft server jars distributed)
+        shell: bash
+        run: |
+          mkdir -p dist/PhoneCraft-Android-Host
+          cp phonecraft.py dashboard.html install-termux.sh README.md README_AR.md dist/PhoneCraft-Android-Host/
+          cp -r widget dist/PhoneCraft-Android-Host/
+          cd dist
+          zip -r PhoneCraft-Android-Host.zip PhoneCraft-Android-Host
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PhoneCraft-Android-Host-ZIP
+          path: dist/PhoneCraft-Android-Host.zip
+          retention-days: 30

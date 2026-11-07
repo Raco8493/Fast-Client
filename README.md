@@ -1,215 +1,121 @@
-<div align="center">
+# PhoneCraft — Android Minecraft Java + Bedrock Host
 
-![LeviLauncher Logo](https://avatars.githubusercontent.com/u/78095377?s=200&v=4)
+**Your Android phone runs the actual Minecraft server.** GitHub only stores the source. No PC, paid hosting, root access or VPS is required for LAN play.
 
-# LeviLauncher — Android version
+> Prototype / best-effort, created 2026-11-08. Tested for Python syntax, HTTP panel and local logic; a real Minecraft join test on an Android device has **not** been performed. You download Minecraft server JARs from their official publishers on your phone. No Minecraft binaries are bundled in this repository.
 
-![Banner](https://camo.githubusercontent.com/bd7bd77cb422a267057d9863095b239b096d4f46dc831a37b45867a9acfad697/68747470733a2f2f63617073756c652d72656e6465722e76657263656c2e6170702f6170693f747970653d576176696e6726636f6c6f723d74696d654772616469656e74266865696768743d33303026616e696d6174696f6e3d66616465496e2673656374696f6e3d68656164657226746578743d4c6576694d4326666f6e7453697a653d313230)
+## Features
 
-**A lightweight Android launcher for Minecraft Bedrock Edition**
+- **Phone is the host**: OpenJDK + Minecraft Java server launched locally in Termux.
+- **One shared world for Java and Bedrock**: Paper + Geyser + Floodgate; Bedrock joins the Java server through Geyser (it is not a separate Mojang Bedrock Dedicated Server binary).
+- **Server type**: **Paper** (plugins, `.jar`) or **Fabric** (server-side mods, `.jar`), each with its own separate world folder.
+- Automatically install **Paper 26.3** from the official PaperMC v3 Fill stable-build API, or Fabric 26.3 using official Fabric Meta API, then Geyser and Floodgate (and Fabric API for Fabric).
+- Web dashboard: install, start/stop, console, OP/de-OP, editable world settings, plugins/mods, RAM settings, approximate core count, and offline backups.
+- Binds dashboard **only** to `127.0.0.1:8765` and requires a random per-launch token for each mutation.
+- **No root** required. Written in Python standard library; Java 25 provided by Termux.
 
-[![GitHub Release](https://img.shields.io/github/v/release/LiteLDev/LeviLaunchroid?style=flat-square&color=blue)](https://github.com/LiteLDev/LeviLaunchroid/releases)
-[![License: Apache 2.0](https://img.shields.io/github/license/LiteLDev/LeviLaunchroid)](https://github.com/LiteLDev/LeviLaunchroid/blob/main/LICENSE)
-[![Issues](https://img.shields.io/github/issues/LiteLDev/LeviLaunchroid?style=flat-square&color=red)](https://github.com/LiteLDev/LeviLaunchroid/issues)
-[![Stars](https://img.shields.io/github/stars/LiteLDev/LeviLaunchroid?style=flat-square&color=yellow)](https://github.com/LiteLDev/LeviLaunchroid)
-[![Downloads](https://img.shields.io/github/downloads/LiteLDev/LeviLaunchroid/total.svg)](https://github.com/LiteLDev/LeviLaunchroid/releases)
-[![Android](https://img.shields.io/badge/Android-9.0%2B-green?style=flat-square&logo=android)](https://www.android.com/)
+## العربي
 
-**[Documentation](https://docs.levimc.org/LeviLauncher/guide/quick-start?platform=android)** · **[Native mod development](https://docs.levimc.org/LeviLamina/developer_guides/android/)**
+[خطوات التشغيل بالعربي](README_AR.md).
 
-</div>
+## Install on Android (no PC needed)
 
----
-
-## Introduction
-
-This repository is the **Android version** of LeviLauncher; the **Windows version** is developed in [LiteLDev/LeviLauncher](https://github.com/LiteLDev/LeviLauncher). Both share one guide at [docs.levimc.org/LeviLauncher](https://docs.levimc.org/LeviLauncher/) (Windows / Android tabs); native mod development is documented in the [LeviLamina docs](https://docs.levimc.org/LeviLamina/developer_guides/android/). There is no iOS version, and none is planned.
-
-LeviLauncher is a lightweight, open-source Android launcher specifically designed for legitimate players of Minecraft Bedrock Edition (MCBE). It works alongside your Google Play installation of Minecraft, allowing you to manage multiple game versions and extend functionality with native mods.
-
-LeviLauncher enables you to import official Minecraft APKs and run them inside the launcher, without installing each version on the system. The official Minecraft app from Google Play must still be installed on the device. The launcher supports loading native mods to enhance gameplay, provides robust multi-version management with complete isolation between installations, and includes built-in tools for managing resource packs and worlds. Whether you're looking to organize different game versions, test modifications, or optimize your gaming experience, LeviLauncher offers the flexibility you need.
-
-### Key Features
-
-- **APK Import & In-Launcher Versions** – Import official Minecraft APKs and run them inside the launcher without installing each version on the system (requires the Google Play version of Minecraft on the device)
-- **Native Mod Loading** – Load native mods (`.so` libraries) to extend or enhance Minecraft features and performance
-- **Multi-Version Management & Version Isolation** – Manage multiple Minecraft versions independently, with separated configurations and data
-- **Multiple Xbox Account Management** – Manage multiple Xbox accounts inside the launcher and switch between them seamlessly
-- **Resource Pack & World Management** – Import, export, and back up your resource packs and worlds with the built-in manager
-
----
-
-## System Requirements
-
-Before installing LeviLauncher, ensure your device meets the following minimum specifications:
-
-- **Operating System:** Android 9.0 (API 28) or higher
-- **Device Architecture:** ARM64 (v8a)
-- **RAM:** Minimum 1 GB available RAM (3 GB or more recommended)
-- **Storage:** At least 2 GB of available storage for Minecraft and game data (5 GB or more recommended)
-- **Minecraft:** Minecraft Bedrock Edition 1.21.80 or later, installed from Google Play (older versions are rejected by the launcher)
-- **License Requirement:** You must own a licensed copy of Minecraft Bedrock Edition purchased from Google Play
-
-> **Note:** For optimal performance and stability, especially when managing multiple versions or large worlds, use a device with at least 3 GB of available RAM and 5 GB of free storage.
-
----
-
-## Installation
-
-### Prerequisites
-
-Before proceeding with LeviLauncher installation, ensure that you have the official Minecraft Bedrock Edition app (1.21.80 or later) installed on your device from Google Play. This is required for LeviLauncher to function properly.
-
-### Installation Steps
-
-1. Visit the [Releases Page](https://github.com/LiteLDev/LeviLaunchroid/releases) and download the latest APK build
-2. Open the downloaded APK from your browser or file manager
-3. When Android asks, allow that app to install unknown apps (Settings > Apps > Special app access > Install unknown apps), then go back
-4. Tap Install to install the APK
-5. Open the app from your app drawer (on the device it is shown as "LeviLauncher") and grant the permissions it requests
-
-> **Important:** LeviLauncher requires a legitimate, licensed copy of Minecraft Bedrock Edition. Do not use this launcher with pirated or unauthorized versions of the game. Ensure your Minecraft license is valid and properly linked to your Microsoft account.
-
----
-
-## Development Setup
-
-If you want to build LeviLauncher from source or contribute to development, follow these steps to set up your development environment:
-
-### Prerequisites
-
-- Git installed on your system
-- Android Studio (latest version recommended)
-- Java Development Kit (JDK) 21 or higher
-- Android SDK with API level 28 or higher
-- Android NDK and CMake (install them through Android Studio's SDK Manager) when native code is built
-
-### Setup Instructions
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/LiteLDev/LeviLaunchroid.git
-   ```
-
-2. Open the project directory in Android Studio
-
-3. Allow Android Studio to download and install required dependencies and build tools
-
-4. Wait for Gradle to complete the initial sync process
-
-5. Connect your Android device or start an emulator (API 28+)
-
-6. Click the "Run" button in Android Studio to build and deploy to your device
-
-7. The app will launch automatically on successful build completion
-
-> **Build Tip:** For faster builds during development, use `Build > Make Project` to compile incrementally instead of full rebuilds.
-
-The project root is named `levilauncher` in the Gradle settings, while the repository is `LeviLaunchroid`. To build from the command line:
+1. Install **Termux** from [F-Droid](https://f-droid.org/packages/com.termux/) or the official [Termux GitHub releases](https://github.com/termux/termux-app/releases). Avoid mixing installation sources for Termux add-ons.
+2. Download the project ZIP onto your phone (usually `Downloads`). Open Termux:
 
 ```bash
-./gradlew assembleDebug
+pkg update -y && pkg install -y unzip
+termux-setup-storage
+cd ~
+unzip -o ~/storage/downloads/PhoneCraft-Android-Host.zip
+cd PhoneCraft-Android-Host
+bash install-termux.sh
+~/phonecraft-start
 ```
 
-On Windows, run `.\gradlew.bat assembleDebug`. Install the official Minecraft app on the test device before testing launcher flows.
+3. On the same phone, open **http://127.0.0.1:8765** in Chrome. Choose **Paper** or **Fabric**, accept the Minecraft EULA explicitly, and tap **Install**.
+4. Tap **Start**. On the first launch, the server creates Geyser config; tap **Stop** and **Start** one extra time to apply the Geyser **Floodgate/NetherNet** config automatically.
+5. Keep Termux alive. Disable Android battery optimization for Termux in system Settings; Android may kill even a wake-locked process when resources are scarce. Long sessions on a phone need cooling and power management.
 
----
+**Optional**: Install Termux:Widget to launch a Termux shortcut from your home screen:
 
-## Contribution Guidelines
+```bash
+mkdir -p ~/.shortcuts
+cp widget/PhoneCraft.sh ~/.shortcuts/PhoneCraft.sh
+chmod +x ~/.shortcuts/PhoneCraft.sh
+```
 
-We welcome contributions from the community to improve LeviLauncher. To ensure a high-quality codebase and smooth collaboration, please adhere to the following guidelines:
+**Optional**: With Termux:Boot installed, set up autostart (Android can still block boot background launches):
 
-### Code Quality
+```bash
+mkdir -p ~/.termux/boot
+cp widget/termux-boot-PhoneCraft.sh ~/.termux/boot/PhoneCraft.sh
+chmod +x ~/.termux/boot/PhoneCraft.sh
+```
 
-Write clean, modular code with descriptive variable names and consistent formatting. Follow Kotlin and Java style guidelines established in the project. Ensure your code is readable and well-structured for future maintainers.
+## Connect players
 
-### Commit Structure
+When everyone is on the **same Wi-Fi**, find the host phone's Wi-Fi IPv4 address in Android Settings:
 
-Use small, focused commits with clear and descriptive messages. Each commit should address a single feature or bug fix. Example: "Fixed memory leak in version manager" or "Added support for ARM32 architecture".
+- **Java:** `PHONE_IP:25565` (TCP)
+- **Bedrock:** `PHONE_IP:19132` (Geyser, **TCP and UDP** for new NetherNet-compatible Bedrock versions)
 
-### Documentation
+**Not** `127.0.0.1` from a *different* phone; localhost is only for a player on the host phone itself.
 
-Add comments for complex logic and update relevant documentation in the repository. If you add new features, update the README and any related documentation files.
+For players across the internet, mobile networks commonly use **CGNAT**. Either forward Java `25565/TCP` and Bedrock `19132/TCP+UDP` at the home router (when possible), or use an appropriately configured tunnel with support for both TCP and UDP, such as the methods [Geyser documents](https://geysermc.org/wiki/geyser/setup/). This project does not configure networking or a tunnel automatically.
 
-### Performance
+Some Bedrock platforms such as game consoles have extra limitations on adding custom servers.
 
-Optimize all additions to maintain low latency and smooth performance. Test your changes thoroughly to ensure they don't introduce lag or performance regressions.
+## How resources really work
 
-### Testing
+- The `RAM %` slider controls the **maximum Java heap** `-Xmx`, bounded by `RAM Total * selected %`, *currently available memory minus headroom*, and *total memory minus OS reserve*. Native memory (JVM, Minecraft networking, plugins) is additional; the host can still be killed by Android.
+- The `CPU %` slider determines the number of **processor cores visible to the JVM** using `-XX:ActiveProcessorCount`. **This does not force exactly 90% CPU usage or make the phone faster**. Android throttling, heat, architecture and other processes determine real CPU performance.
+- **85% RAM** is a risky max on Android. A good starting point is 50–65% with view distance 4–6, then increase gradually if the phone remains stable.
+- Battery, heat, foreground restrictions and network connection can still interrupt the server even if the phone is powered on.
 
-Test all changes on multiple devices and Android versions to ensure compatibility and stability.
+## Mods and plugins
 
-### Pull Requests
+**Paper mode:** Add trusted compatible `.jar` plugins from the dashboard. Geyser-Spigot and Floodgate-Spigot are preinstalled. Paper plugins and Fabric mods are *different* formats, not interchangeable.
 
-Submit PRs with a detailed description of changes, including the problem solved or feature added. Reference any related issues and provide screenshots or videos if your changes affect the UI.
+**Fabric mode:** Add trusted compatible `.jar` server-side mods. Fabric Loader + Fabric API + Geyser-Fabric + Floodgate-Fabric are installed on demand. **Bedrock clients generally cannot use Java mods requiring a matching client mod or custom client-side content.** Only install server-side compatible mods for mixed Java/Bedrock. You may have to adjust compatibility and version-specific mod dependencies yourself.
 
-### Community Standards
+To give Java username `Steve` OP, enter `Steve` in the UI. For Floodgate Bedrock players, the in-game Java-side name often uses a dot prefix, e.g. `.Alex`, with spaces replaced by underscores. OP grants full server privileges, so use it only for trusted people.
 
-Follow our Code of Conduct to maintain a respectful and inclusive environment. Be constructive in feedback, respect others' work, and communicate professionally with all contributors.
+## World backups and location
 
-**Before Submitting:** Run a full build cycle and test on at least one device to minimize errors. We review all contributions promptly and appreciate your efforts to enhance LeviLauncher.
+```
+~/.phonecraft/
+    config.json
+    servers/
+        paper/       # Paper world, plugins, jars
+        fabric/      # Fabric world, mods, jars
+    backups/         # ZIP world backups
+```
 
----
+Stop the server before backing up to prevent inconsistent world saves. You can copy the resulting ZIP out of Termux using standard Android storage commands after granting permissions.
 
-## Usage Guidelines
+**Security:** Never upload unknown mods/plugins: a `.jar` runs executable code with your Termux app privileges. The control panel is localhost-only; do not port-forward port `8765`. Leave `online-mode=true`; this is important even when Floodgate is installed. Don't upload Floodgate private keys (`key.pem`) to GitHub or share them.
 
-LeviLauncher is designed for legitimate players of Minecraft Bedrock Edition. Please respect the following guidelines and terms of use:
+## Development
 
-### Permitted Uses
+Requires Python 3.10+ for the controller; target platform is Android + Termux + Java 25.
 
-- Modify LeviLauncher for personal gameplay and to test new features
-- Create educational content (videos, tutorials, blog posts) showcasing LeviLauncher's capabilities
-- Fork the repository for learning purposes or to create derivative projects, provided you comply with the Apache License 2.0
-- Share your modified versions with others as long as you comply with the Apache License 2.0 terms
+```bash
+python -m unittest discover -s tests -v
+python phonecraft.py
+```
 
-### Prohibited Uses
+The browser dashboard is served from `dashboard.html`. Backend is `phonecraft.py`. Build distributions are assembled using `.github/workflows/build-zip.yml` GitHub Actions (ZIP only, *not* a standalone APK).
 
-- Do not claim LeviLauncher as your own without crediting LeviMC and its contributors
-- Do not use LeviLauncher to violate Mojang or Microsoft's user agreements
+## Official sources
 
-> **Disclaimer:** The authors and contributors of LeviLauncher are not responsible for bans, damages, or issues arising from the use of this software. Use it at your own risk and in accordance with Minecraft's terms of service.
+- [Termux](https://termux.dev/)
+- [PaperMC downloads service](https://docs.papermc.io/misc/downloads-service/)
+- [PaperMC Java requirement](https://docs.papermc.io/paper/getting-started/)
+- [Geyser setup](https://geysermc.org/wiki/geyser/setup/)
+- [Floodgate setup](https://geysermc.org/wiki/floodgate/setup/)
+- [Fabric Server](https://fabricmc.net/use/?page=server)
+- [Fabric API](https://modrinth.com/mod/fabric-api)
+- [Floodgate Fabric](https://modrinth.com/mod/floodgate)
 
-For full legal details, see the [LICENSE](LICENSE) file in the repository.
-
----
-
-## Credits & Acknowledgements
-
-LeviLauncher would not be possible without the contributions and support of many talented individuals and organizations:
-
-### Special Thanks To
-
-- **LeviMC** – For maintaining the LeviLauncher project and providing infrastructure support
-- **Android Community** – For excellent documentation, libraries, and tools that made this launcher possible
-- **Open Source Community** – For all the libraries, frameworks, and tools that power this project
-- **Contributors** – A heartfelt thank you to all [contributors](https://github.com/LiteLDev/LeviLaunchroid/graphs/contributors) who have continuously improved and maintained LeviLauncher through their time and expertise
-
----
-
-## Contact & Support
-
-**Author / Team:** LeviMC
-
-**Project Repository:** [https://github.com/LiteLDev/LeviLaunchroid](https://github.com/LiteLDev/LeviLaunchroid)
-
-**Documentation:** [docs.levimc.org/LeviLauncher](https://docs.levimc.org/LeviLauncher/guide/quick-start?platform=android) · native mods: [docs.levimc.org/LeviLamina](https://docs.levimc.org/LeviLamina/developer_guides/android/)
-
-**Report Issues:** [GitHub Issues Page](https://github.com/LiteLDev/LeviLaunchroid/issues)
-
-**For support and questions:** Please create an issue on the GitHub repository or contact LeviMC directly
-
----
-
-<div align="center">
-
-[![GitHub Release](https://img.shields.io/github/v/release/LiteLDev/LeviLaunchroid?style=flat-square&color=blue)](https://github.com/LiteLDev/LeviLaunchroid/releases)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Issues](https://img.shields.io/github/issues/LiteLDev/LeviLaunchroid?style=flat-square&color=red)](https://github.com/LiteLDev/LeviLaunchroid/issues)
-[![Stars](https://img.shields.io/github/stars/LiteLDev/LeviLaunchroid?style=flat-square&color=yellow)](https://github.com/LiteLDev/LeviLaunchroid)
-[![Downloads](https://img.shields.io/github/downloads/LiteLDev/LeviLaunchroid/total.svg)](https://github.com/LiteLDev/LeviLaunchroid/releases)
-[![Android](https://img.shields.io/badge/Android-9.0%2B-green?style=flat-square&logo=android)](https://www.android.com/)
-
-**Made with ❤️ by LeviMC**
-
-</div>
+No official affiliation with Mojang/Microsoft, PaperMC, FabricMC or GeyserMC. Respect those projects' licences, server terms and third-party mods' licences.
