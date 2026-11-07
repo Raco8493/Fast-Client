@@ -32,13 +32,14 @@ public final class HostService extends Service {
     private static final ArrayDeque<String> LINES=new ArrayDeque<>();
     private static volatile String state="idle", error="", kind="", version="";
     private static volatile boolean busy=false;
+    private static volatile String queuedAction=null;
     private static volatile Process child;
     private static volatile long started=0;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private PowerManager.WakeLock wake;
     private WifiManager.WifiLock wifi;
     private ServerEngine engine;
-    static final String INSTALL="com.phonecraft.host.INSTALL",START="com.phonecraft.host.START",STOP="com.phonecraft.host.STOP";
+    static final String PREPARE="com.phonecraft.host.PREPARE",INSTALL="com.phonecraft.host.INSTALL",START="com.phonecraft.host.START",STOP="com.phonecraft.host.STOP";
 
     static void log(String message){
         synchronized(LOCK){
@@ -107,22 +108,51 @@ public final class HostService extends Service {
             });
             return START_NOT_STICKY;
         }
-        if(busy||(child!=null&&child.isAlive())){
-            log("سيرفر موجود أو عملية تثبيت شغالة بالفعل");return START_NOT_STICKY;
+        if(busy){
+            if(INSTALL.equals(action)||START.equals(action)){
+                queuedAction=START.equals(action)?START:queuedAction==null?INSTALL:queuedAction;
+                log("هيتم تنفيذ الطلب تلقائيًا بعد تجهيز المحرك الحالي");
+            }
+            return START_NOT_STICKY;
+        }
+        if(child!=null&&child.isAlive()){
+            log("السيرفر شغال بالفعل");return START_NOT_STICKY;
         }
         busy=true;
         SharedPreferences p=getSharedPreferences("hostphone_settings",MODE_PRIVATE);
         String selected=p.getString("kind","java");
         String target="bedrock".equals(selected)?p.getString("bedrockVersion","26.50"):p.getString("javaVersion","26.3");
-        int ram=p.getInt("ramPercent",70),cpu=p.getInt("cpuCores",2);
+        ActivityManager am=(ActivityManager)getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager.MemoryInfo mi=new ActivityManager.MemoryInfo();am.getMemoryInfo(mi);
+        int defaultRam=(int)Math.max(512,Math.min(2048,mi.totalMem/1048576-2048));
+        int ram=p.getInt("ramMb",defaultRam),cpu=p.getInt("cpuCores",2);
+        boolean eula=p.getBoolean("eulaAccepted",false);
         worker.execute(()->{
             kind=selected;version=target;error="";
             try{
-                if(INSTALL.equals(action)){
-                    state="installing";log("تثبيت "+selected+" "+target);
+                if(PREPARE.equals(action)){
+                    state="preparing";notification("تجهيز محرك Java ARM64 المدمج");
+                    engine.installRuntime();
+                    SharedPreferences latest=getSharedPreferences("hostphone_settings",MODE_PRIVATE);
+                    if(latest.getBoolean("eulaAccepted",false)){
+                        String currentKind=latest.getString("kind","java");
+                        String currentVersion="bedrock".equals(currentKind)?latest.getString("bedrockVersion","26.50"):latest.getString("javaVersion","26.3");
+                        kind=currentKind;version=currentVersion;
+                        state="installing";notification("تحميل ملفات سيرفر Minecraft تلقائيًا");
+                        engine.install(currentKind,currentVersion,true);
+                        state="installed";notification("Hostphone جاهز لتشغيل السيرفر");
+                    }else{state="waiting_eula";notification("المحرك جاهز — وافق على اتفاقية Minecraft أولاً");}
+                }else if(INSTALL.equals(action)){
+                    if(!eula)throw new IllegalStateException("الموافقة على اتفاقية Minecraft مطلوبة");
+                    state="installing";notification("تحميل وتثبيت ملفات Minecraft تلقائيًا");
                     engine.install(selected,target,true);
                     state="installed";notification("السيرفر اتثبت — اضغط تشغيل");
                 }else if(START.equals(action)){
+                    if(!eula)throw new IllegalStateException("وافق على EULA قبل بدء تشغيل السيرفر");
+                    if(!engine.installed(selected,target)){
+                        state="installing";notification("تحميل ملفات السيرفر قبل أول تشغيل");
+                        engine.install(selected,target,true);
+                    }
                     state="starting";locks();
                     Process proc=engine.start(selected,target,ram,cpu);
                     child=proc;started=System.currentTimeMillis();
@@ -153,7 +183,14 @@ public final class HostService extends Service {
                     },"MinecraftExitWaiter").start();
                 }
             }catch(Exception e){error=e.toString();state="error";log("ERROR: "+error);releaseLocks();notification("خطأ في السيرفر — افتح السجل");}
-            finally{busy=false;}
+            finally{
+                busy=false;
+                String next=queuedAction;queuedAction=null;
+                if(next!=null){
+                    Intent queued=new Intent(HostService.this,HostService.class);
+                    queued.setAction(next);startService(queued);
+                }else if(child==null){stopForeground(true);stopSelf();}
+            }
         });
         return START_NOT_STICKY;
     }

@@ -41,6 +41,8 @@ final class ServerEngine {
 
     File base() {File f=new File(context.getFilesDir(),"hosting");if(!f.exists())f.mkdirs();return f;}
     File runtime() {return new File(base(),"java25");}
+    boolean runtimeReady() {return new File(runtime(),".ready").isFile();}
+    boolean installed(String kind,String version) {File f=profile(kind,version);return new File(f,".installed").isFile()&&new File(f,"server.jar").isFile();}
     File profile(String kind, String version) {return new File(base(),kind+"-"+version.replaceAll("[^0-9A-Za-z.]","_"));}
 
     static void copy(InputStream in, OutputStream out, long cap) throws IOException {
@@ -112,7 +114,8 @@ final class ServerEngine {
         try {
             if(c.getResponseCode()!=200)throw new IOException("تحميل فشل: HTTP "+c.getResponseCode());
             if(c.getContentLengthLong()>MAX_DOWNLOAD_BYTES)throw new IOException("ملف أكبر من الحد");
-            MessageDigest digest=MessageDigest.getInstance("SHA-256");
+            final String algorithm = expectedSha256!=null && expectedSha256.length()==40 ? "SHA-1" : "SHA-256";
+            MessageDigest digest=MessageDigest.getInstance(algorithm);
             try(InputStream in=new BufferedInputStream(c.getInputStream());OutputStream out=new BufferedOutputStream(new FileOutputStream(temp))){
                 byte[] b=new byte[65536];int n;long size=0;
                 while((n=in.read(b))!=-1){size+=n;if(size>MAX_DOWNLOAD_BYTES)throw new IOException("ملف كبير جدًا");digest.update(b,0,n);out.write(b,0,n);}
@@ -120,7 +123,7 @@ final class ServerEngine {
             }
             if(expectedSha256!=null&&!expectedSha256.isEmpty()){
                 StringBuilder hex=new StringBuilder();for(byte x:digest.digest())hex.append(String.format(Locale.US,"%02x",x & 255));
-                if(!hex.toString().equalsIgnoreCase(expectedSha256))throw new IOException("فشل فحص SHA-256");
+                if(!hex.toString().equalsIgnoreCase(expectedSha256))throw new IOException("فشل فحص "+algorithm+" لملف السيرفر");
             }
             try(FileInputStream in=new FileInputStream(temp)){if(in.read()!=0x50||in.read()!=0x4b)throw new IOException("التحميل مش JAR صالح");}
             if(dest.exists()&&!dest.delete())throw new IOException("تعذر استبدال الملف");
@@ -130,7 +133,8 @@ final class ServerEngine {
 
     /** Install a playable Java or Bedrock server JAR and Geyser bridge when requested. */
     void install(String kind,String version,boolean eula) throws Exception {
-        if(!eula)throw new IOException("لازم توافق على EULA قبل تنزيل سيرفر Java");
+        if(!eula)throw new IOException("لازم توافق على EULA بوضوح قبل تنزيل وتشغيل السيرفر");
+        if(installed(kind,version)){logger.message("ملفات سيرفر Minecraft موجودة بالفعل: "+kind+" "+version);return;}
         installRuntime();
         File dir=profile(kind,version);if(!dir.exists()&&!dir.mkdirs())throw new IOException("تعذر إنشاء السيرفر");
         File jar=new File(dir,"server.jar");
@@ -145,6 +149,28 @@ final class ServerEngine {
             if(url==null)throw new IOException("ملف PowerNukkitX مفقود من الإصدار");
             download(url,jar,null);
             logger.message("PowerNukkitX جاهز. المنفذ الافتراضي 19132/UDP");
+        }else if("java".equals(kind)){
+            // The actual official Mojang/Microsoft Vanilla Minecraft Java server.
+            // Fetches directly from Mojang only after the user explicitly accepts
+            // Minecraft EULA; the proprietary jar is not redistributed in the APK.
+            JSONObject manifest=getJson("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json");
+            JSONArray versions=manifest.getJSONArray("versions");String metadataUrl=null;
+            for(int i=0;i<versions.length();i++){
+                JSONObject item=versions.getJSONObject(i);
+                if(version.equals(item.optString("id")) && "release".equals(item.optString("type"))){
+                    metadataUrl=item.getString("url");break;
+                }
+            }
+            if(metadataUrl==null || !metadataUrl.startsWith("https://piston-meta.mojang.com/"))
+                throw new IOException("الإصدار المطلوب مش موجود في قائمة Mojang الرسمية");
+            JSONObject info=getJson(metadataUrl).getJSONObject("downloads").getJSONObject("server");
+            String jarUrl=info.getString("url");
+            if(!jarUrl.startsWith("https://piston-data.mojang.com/"))
+                throw new IOException("الرابط مش من سيرفرات Minecraft الرسمية");
+            download(jarUrl,jar,info.getString("sha1"));
+            logger.message("تم تنزيل Minecraft Java Vanilla الأصلي من Mojang (SHA-1 verified)");
+            File eulaFile=new File(dir,"eula.txt");
+            try(FileOutputStream out=new FileOutputStream(eulaFile)){out.write("eula=true\n".getBytes(StandardCharsets.UTF_8));}
         }else{
             JSONArray builds=getArray("https://fill.papermc.io/v3/projects/paper/versions/"+version+"/builds");
             JSONObject build=null;
@@ -185,7 +211,7 @@ final class ServerEngine {
         } else logger.message("افحص إعداد auth-type في ملف Geyser بعد أول تشغيل");
     }
 
-    Process start(String kind,String version,int ramPercent,int cores) throws Exception {
+    Process start(String kind,String version,int ramMb,int cores) throws Exception {
         File jar=new File(profile(kind,version),"server.jar");
         if(!new File(profile(kind,version),".installed").exists()||!jar.exists())throw new IOException("لازم تثبت المحرك والسيرفر الأول");
         File java=new File(runtime(),"bin/java");
@@ -194,12 +220,13 @@ final class ServerEngine {
         ActivityManager am=(ActivityManager)context.getSystemService(Context.ACTIVITY_SERVICE);
         ActivityManager.MemoryInfo mi=new ActivityManager.MemoryInfo();am.getMemoryInfo(mi);
         long total=mi.totalMem/1048576;long available=mi.availMem/1048576;
-        // Never allocate 85% of physical RAM blindly: Android and native heap
-        // need headroom. Xmx is an actual JVM heap limit, not synthetic load.
-        long userRequested=total*ramPercent/100;
-        long allowedByFree=Math.max(256,available-512);
-        long heap=Math.min(userRequested,allowedByFree);
-        if(heap<512)throw new IOException("الرام المتاحة أقل من 512MB للسيرفر");
+        // An actual JVM heap limit; never claim a 9 GiB allocation if the phone
+        // cannot spare 9 GiB + native JVM / Android headroom at launch time.
+        if(ramMb<512||ramMb>32768)throw new IOException("حجم الرام لازم يكون بين 512 و32768 ميجابايت");
+        long reserve=Math.max(1024L,total/10);
+        if(ramMb+reserve>total)throw new IOException("الجهاز فيه "+total+"MB RAM فقط. لطلب "+ramMb+"MB لازم تسيب "+reserve+"MB للنظام على الأقل");
+        if(ramMb+reserve>available)throw new IOException("الرام المتاحة الآن "+available+"MB؛ تشغيل سيرفر بحجم "+ramMb+"MB يحتاج "+(ramMb+reserve)+"MB تقريبًا. اقفل البرامج أو قلل الرام");
+        long heap=ramMb;
         int cpuCount=Math.max(1,Math.min(cores,Runtime.getRuntime().availableProcessors()));
         List<String> argv=new ArrayList<>();
         argv.add(java.getAbsolutePath());argv.add("-Xms256M");argv.add("-Xmx"+heap+"M");
@@ -218,7 +245,7 @@ final class ServerEngine {
         String previous=env.get("LD_LIBRARY_PATH");if(previous!=null)libs+=":"+previous;
         env.put("LD_LIBRARY_PATH",libs);env.put("JAVA_HOME",runtime().getAbsolutePath());
         env.put("HOME",base().getAbsolutePath());env.put("TMPDIR",context.getCacheDir().getAbsolutePath());
-        logger.message("تشغيل Java ARM64: -Xmx"+heap+"M، CPU cores "+cpuCount);
+        logger.message("تشغيل سيرفر Minecraft بذاكرة JVM قصوى "+heap+"MB / "+cpuCount+" أنوية معالِج (الحد مش استهلاك إجباري)");
         return builder.start();
     }
 }

@@ -1,22 +1,19 @@
-# Hostphone v1.3 alpha — محرك Minecraft حقيقي يعمل محليًا على Android ARM64
+# Hostphone v1.4 – محرك أندرويد مع تثبيت تلقائي
 
-المشروع يشمل `ServerEngine` لتحميل Paper/PowerNukkitX من الإصدارات الرسمية و`HostService` لخدمة تشغيل Java فعلية في جهازك. كل شيء على نفس موبايلك، ومفيش Termux أو VPS أو Remote Server.
+- APK لأجهزة Android ARM64، يحتوي على Java 25 runtime مستقل ضمن التطبيق **بدون Termux**.
+- عند فتح التطبيق يجهّز محرك Java المدمج تلقائيًا (لا يحتاج تحميل المحرك من Microsoft).
+- للمرة الأولى، اختار Java أو Bedrock أو Geyser والإصدار ثم اقرأ Minecraft EULA واضغط زر الموافقة. **الموافقة يدوية وصريحة**؛ بعدها يبدأ تنزيل ملف السيرفر المناسب تلقائيًا.
+- **Java**: يحمل ملف Minecraft Server Vanilla الرسمي من Mojang/Microsoft عبر metadata الرسمية ويفحص بصمة SHA-1.
+- **Geyser**: يحمل Paper + Geyser + Floodgate من ناشريها، ليتيح الانضمام من Bedrock وJava إلى عالم واحد.
+- **Bedrock**: يشغّل PowerNukkitX مفتوح المصدر؛ **ليس برنامج Bedrock Dedicated Server الرسمي من Microsoft** لأن Mojang لا توفّر له نسخة أندرويد ARM64.
+- برامج السيرفر ليست مرفقة داخل APK؛ يتم جلبها من الناشر على الجهاز بعد الموافقة. الحجم والوقت حسب الإصدار والإنترنت. عند فتح التطبيق لاحقًا يتم استخدام الموجود ولا يُعاد تحميله إذا كان مثبتًا.
+- زر الموافقة على EULA يحفظ الاختيار محليًا، ورابط EULA يفتح موقع Minecraft الرسمي في المتصفح.
+- اختيار **9GB = 9216MiB** يضبط علم JVM `-Xmx9216M` بدقة **لو الذاكرة المتاحة كافية**. لو ناقصة يرفض التشغيل برسالة واضحة، بدل تقليل الحجم بصمت. قيمة Xmx حد أقصى للـJava Heap، وليست حجزًا مباشرًا للذاكرة ولا ضمانًا للقدرة الفعلية.
+- عدد الأنوية المختارة يتطابق مع `-XX:ActiveProcessorCount`، لكنه لا يجبر المعالج على استخدام نسبة معينة؛ الحرارة والقيود يحددها أندرويد.
+- يلزم إنترنت عند التنزيل الأول. Java يعمل عادة على TCP 25565، Bedrock وGeyser يستخدمان UDP 19132. الدخول من الإنترنت الخارجي يتطلب إعداد الشبكة.
 
-**المحرك غير مبني داخل ملفات المصدر وحدها**: GitHub Actions بتنزل Android OpenJDK 25 ARM64 وبتتحقق من SHA-256 قبل بناء APK وتضمّنه كـ runtime25.zip وlibhostphone_java.so. ملف APK الناتج من GitHub Actions المفروض يحتوي على المحرك، أما APK الإصدار 1.2 القديم فليس به محرك.
+## الاختبار والحدود
 
-## تشغيل
-1. تحتاج Android ARM64 وRAM متاحة لا تقل عن 512 MB للسيرفر فوق ذاكرة النظام، ويُفضّل مساحة عدة GB.
-2. تثبيت APK الناتج من GitHub Actions (مش مجرد Source zip)؛ افتح Hostphone واختر Java أو Bedrock أو Geyser مع إصدار مناسب.
-3. وافق على Minecraft EULA، ثم اضغط تثبيت؛ سيجري تنزيل JAR من PaperMC أو PowerNukkitX.
-4. اضغط تشغيل. حالة Online لا تظهر إلا بعد قراءة رسالة بدء السيرفر من الـ JVM، والسجل يعرض أي خطأ فعلي.
-5. من نفس شبكة الواي فاي، Java على TCP 25565، وBedrock على UDP 19132 (PowerNukkitX أو Geyser).
+التغييرات مصدر برمجي؛ حتى بعد بناء APK بنجاح لا يمكن ضمان تشغيل Minecraft عمليًا على كل جهاز من دون تجربة سيرفر حقيقي على هاتف ARM64، والتحقق من خروج رسالة `Done` ثم تجربة الدخول من اللعبة. تأكد من توفر مساحة تخزين حرة والبطارية والمبرد المناسب.
 
-## قيود حقيقية
-- Java: Paper بيدعم Plugins، وليس Mods بتاعة Fabric/Forge. Geyser مع Floodgate يحتاج ضبط `auth-type: floodgate` في إعدادات الجسر وقد يحتاج إعادة تشغيل بعد الإنشاء لأول مرة.
-- Bedrock: PowerNukkitX هو بديل Java لسيرفر Bedrock، مش Mojang Bedrock الرسمي؛ بعض خصائص Bedrock مختلفة. 26.50 مستقر و26.60 تجريبي، والنسخ بتتغير.
-- التطبيق مش بيعمل Port Forwarding تلقائي للراوتر، ولا يقدر يضمن 90% من CPU أو يبقى شغال لو Android قتله بسبب الحرارة/البطارية.
-- Java Xmx يُحسب من الاختيار ومن ذاكرة الجهاز *المتاحة*، مع 512 MB احتياطي للأندرويد؛ تقدر تختار أنوية ActiveProcessorCount في واجهة الأداء.
-- **اختبار تشغيل Minecraft فعليًا على موبايل لم يُنفذ حتى الآن**؛ Android runtime launcher وإصدارات JAR قد تواجه مشاكل توافق. لا يعتبر مجرد نجاح APK build دليلاً على أن اللاعبين دخلوا سيرفر.
-- لو تطبيقك Android 15+ وقيود الخلفية تمنع استمرار الخدمة، جرّب إلغاء تحسين البطارية ومتابعة الإشعار.
-
-المراجع والمصادر: Android JRE 25 مبني بواسطة AngelAuraMC/OpenJDK (راجع تراخيصها)، وPaperMC، وPowerNukkitX (LGPL-3.0)، وGeyserMC. ملفات Minecraft غير موزعة ضمن الـ APK؛ يقوم التطبيق بتنزيلها من جهات النشر رسميًا.
+روابط المصدر: https://www.minecraft.net/en-us/eula • https://piston-meta.mojang.com/mc/game/version_manifest_v2.json • https://fill.papermc.io • https://powernukkitx.org
