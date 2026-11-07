@@ -1,7 +1,7 @@
 name: Build PhoneCraft source distribution
 on:
   push:
-    branches: [main]
+    branches: [main, phonecraft-android-host]
   workflow_dispatch:
 permissions:
   contents: read
