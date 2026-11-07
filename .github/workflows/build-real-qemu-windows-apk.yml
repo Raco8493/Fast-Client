@@ -21,7 +21,12 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: Android API 35
-        run: sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKM="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)"
+          test -x "$SDKM"
+          yes | "$SDKM" --licenses >/dev/null || true
+          "$SDKM" --install 'platforms;android-35' 'build-tools;35.0.0'
       - name: Gradle 8.10.2
         uses: gradle/actions/setup-gradle@v4
         with:
