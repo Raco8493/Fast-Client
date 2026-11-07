@@ -2,6 +2,20 @@
 
 دي نسخة أولية **قابلة للتشغيل عن طريق Termux**. الموبايل نفسه بيشغّل Java server، مش كمبيوتر ولا GitHub. GitHub وظيفته حفظ المشروع والتحديثات فقط.
 
+## التشغيل مباشرة من GitHub (أسهل طريقة)
+
+نزّل Termux من F-Droid، وبعدها في Termux اكتب:
+
+```bash
+pkg update -y && pkg install -y git
+git clone --depth 1 -b phonecraft-android-host https://github.com/Raco8493/Fast-Client.git PhoneCraft
+cd PhoneCraft
+bash install-termux.sh
+~/phonecraft-start
+```
+
+افتح المتصفح على **http://127.0.0.1:8765**.
+
 ## التثبيت من الموبايل
 
 1. نزّل [Termux من F-Droid](https://f-droid.org/packages/com.termux/).
