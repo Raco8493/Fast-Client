@@ -4,6 +4,7 @@ on:
     branches: [windows10-android-qemu-vm]
     paths:
       - 'Windows10-QEMU-Android/**'
+      - '.github/workflows/build-real-qemu-windows-apk.yml'
   workflow_dispatch:
 permissions:
   contents: read
