@@ -18,6 +18,18 @@
 
 [خطوات التشغيل بالعربي](README_AR.md).
 
+## Direct install from the GitHub feature branch
+
+```bash
+pkg update -y && pkg install -y git
+git clone --depth 1 -b phonecraft-android-host https://github.com/Raco8493/Fast-Client.git PhoneCraft
+cd PhoneCraft
+bash install-termux.sh
+~/phonecraft-start
+```
+
+Open http://127.0.0.1:8765 on the same phone. The `main` branch of Fast-Client is untouched; this project lives in the separate `phonecraft-android-host` branch.
+
 ## Install on Android (no PC needed)
 
 1. Install **Termux** from [F-Droid](https://f-droid.org/packages/com.termux/) or the official [Termux GitHub releases](https://github.com/termux/termux-app/releases). Avoid mixing installation sources for Termux add-ons.
