@@ -10,9 +10,11 @@ android {
         applicationId 'com.phonecraft.host'
         minSdk 26
         targetSdk 33
-        versionCode 3
-        versionName '1.2.0-beta'
+        versionCode 4
+        versionName '1.3.0-alpha'
     }
+
+    packaging { jniLibs { useLegacyPackaging = true; keepDebugSymbols += '**/libhostphone_java.so' } }
 
     buildTypes {
         release { minifyEnabled false }

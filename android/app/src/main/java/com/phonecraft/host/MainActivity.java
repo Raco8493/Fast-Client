@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Debug;
@@ -19,12 +20,8 @@ import android.webkit.WebViewClient;
 
 import org.json.JSONObject;
 
-/**
- * Hostphone 1.2: honest native Android controls and per-app resource telemetry.
- * This build does not contain a Minecraft server engine or Java runtime. Its
- * explicit install/start state must never claim that a server is running.
- * A real bundled ARM64 runtime is needed before enabling server launches.
- */
+/** Hostphone v1.3: Android foreground-service server management. Java runtime
+ * and Minecraft server JARs are managed by ServerEngine and HostService. */
 public final class MainActivity extends Activity {
     private static final String HOME = "file:///android_asset/launcher.html";
     private static final String PREFS = "hostphone_settings";
@@ -92,7 +89,7 @@ public final class MainActivity extends Activity {
             j.put("appCpuPercent", Math.round(appCpu * 10.0) / 10.0);
             j.put("cores", cores);
             j.put("lowMemory", mem.lowMemory);
-            j.put("engine", "not-bundled");
+            j.put("engine", "arm64-jre25");
             if (Build.VERSION.SDK_INT >= 29) {
                 PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
                 j.put("thermalStatus", pm.getCurrentThermalStatus());
@@ -111,7 +108,7 @@ public final class MainActivity extends Activity {
                 j.put("kind", s.getString("kind", "java"));
                 j.put("name", s.getString("name", "My Hostphone World"));
                 j.put("javaVersion", s.getString("javaVersion", "26.3"));
-                j.put("bedrockVersion", s.getString("bedrockVersion", "26.62"));
+                j.put("bedrockVersion", s.getString("bedrockVersion", "26.50"));
                 j.put("ramPercent", s.getInt("ramPercent", 70));
                 j.put("cpuCores", s.getInt("cpuCores", Math.max(1,Runtime.getRuntime().availableProcessors()-1)));
             } catch (Exception ignored) { }
@@ -120,7 +117,7 @@ public final class MainActivity extends Activity {
 
         @JavascriptInterface public String saveConfig(String kind, String name, String javaVersion, String bedrockVersion) {
             if (!kind.matches("java|bedrock|geyser") || !javaVersion.matches("26\\.3|26\\.2|1\\.21\\.11") ||
-                !bedrockVersion.matches("26\\.62|26\\.60|26\\.50") || name == null ||
+                !bedrockVersion.matches("26\\.60|26\\.50") || name == null ||
                 name.trim().length() < 1 || name.trim().length() > 36) {
                 return "رفض الإعدادات: تأكد من النوع والاسم والإصدار";
             }
@@ -135,13 +132,34 @@ public final class MainActivity extends Activity {
             if (ramPercent < 25 || ramPercent > 85 || cpuCores < 1 || cpuCores > cores) return "اختيار موارد غير صحيح";
             getSharedPreferences(PREFS,MODE_PRIVATE).edit()
                 .putInt("ramPercent",ramPercent).putInt("cpuCores",cpuCores).apply();
-            return "تم حفظ تخصيص الموارد؛ سيُطبّق بعد دمج محرك السيرفر";
+            return "تم حفظ الموارد؛ هتتطبق عند التشغيل الجاي حسب الرام المتاحة";
         }
 
-        @JavascriptInterface public String serverState() {
-            return "غير متاح: النسخة دي لا تحتوي على محرك Minecraft أو Java ARM64 مدمج. " +
-                   "لن نعرض حالة Online أو نستهلك موارد على الفاضي.";
+        @JavascriptInterface public String serverState() { return HostService.json(); }
+
+        @JavascriptInterface public String installServer(boolean acceptedEula) {
+            if (!acceptedEula) return "وافق على EULA الأول قبل التثبيت";
+            if (!android.os.Build.SUPPORTED_ABIS[0].equals("arm64-v8a"))
+                return "المحرك ده لأجهزة ARM64 فقط حاليًا";
+            Intent intent = new Intent(MainActivity.this, HostService.class);
+            intent.setAction(HostService.INSTALL);
+            try { startForegroundService(intent);return "بدأ تثبيت المحرك والسيرفر — تابع الحالة والسجل"; }
+            catch (Exception e) {return "فشل بدء الخدمة: " + e.getMessage();}
         }
+        @JavascriptInterface public String startServer() {
+            Intent intent = new Intent(MainActivity.this, HostService.class);
+            intent.setAction(HostService.START);
+            try {startForegroundService(intent);return "جارٍ بدء سيرفر Minecraft الحقيقي — تابع حالة التشغيل";}
+            catch(Exception e){return "فشل التشغيل: " + e.getMessage();}
+        }
+        @JavascriptInterface public String stopServer() {
+            Intent intent = new Intent(MainActivity.this, HostService.class);
+            intent.setAction(HostService.STOP);
+            try {startForegroundService(intent);return "إرسال طلب إيقاف السيرفر";}
+            catch(Exception e){return "خطأ: " + e.getMessage();}
+        }
+        @JavascriptInterface public String sendCommand(String command) {return HostService.command(command);}
+
     }
 
     @Override protected void onDestroy() {

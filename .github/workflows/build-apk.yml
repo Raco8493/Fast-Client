@@ -1,4 +1,4 @@
-name: Build Hostphone Android APK
+name: Build Hostphone Minecraft Android APK
 on:
   push:
     branches: [phonecraft-android-host]
@@ -11,6 +11,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 38
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -23,13 +24,45 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      - name: Build APK
+      - name: Bundle the actual ARM64 Android OpenJDK 25 runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUNTIME_URL='https://github.com/AngelAuraMC/angelauramc-openjdk-build/releases/download/download_jre25/jre25-android-arm64.tar.xz'
+          curl --fail --location --retry 4 --retry-delay 3 --output /tmp/runtime.tar.xz "$RUNTIME_URL"
+          echo 'd3eb7afe2240c26728a1bb440502c5f18ac3883e932d202dd7f0c9bcbbce4c37  /tmp/runtime.tar.xz' | sha256sum --check
+          mkdir -p /tmp/jre-extracted
+          tar -xJf /tmp/runtime.tar.xz -C /tmp/jre-extracted
+          echo 'Runtime files:'
+          find /tmp/jre-extracted -maxdepth 3 -type f | head -35
+          JAVA_PATH=$(find /tmp/jre-extracted -type f -path '*/bin/java' | head -n1)
+          test -n "$JAVA_PATH" || { echo 'Missing ARM64 bin/java'; exit 1; }
+          JAVA_HOME_PATH=$(dirname "$(dirname "$JAVA_PATH")")
+          file "$JAVA_PATH"
+          # Android 10+ only permits process execution from the APK's nativeLibraryDir.
+          # The native executable is installed there; a symlink in Java home points to it.
+          mkdir -p android/app/src/main/jniLibs/arm64-v8a
+          cp "$JAVA_PATH" android/app/src/main/jniLibs/arm64-v8a/libhostphone_java.so
+          chmod 755 android/app/src/main/jniLibs/arm64-v8a/libhostphone_java.so
+          mkdir -p /tmp/runtime25-content
+          cp -aL "$JAVA_HOME_PATH"/. /tmp/runtime25-content/
+          rm -f /tmp/runtime25-content/bin/java
+          mkdir -p android/app/src/main/assets
+          (cd /tmp/runtime25-content && zip -q -r -9 "$GITHUB_WORKSPACE/android/app/src/main/assets/runtime25.zip" .)
+          unzip -l android/app/src/main/assets/runtime25.zip | grep -E 'lib/server/libjvm.so|lib/modules' || exit 1
+          ls -lh android/app/src/main/assets/runtime25.zip
+      - name: Check Java source syntax (Android Gradle compilation)
+        working-directory: android
+        run: gradle --no-daemon --stacktrace :app:compileDebugJavaWithJavac
+      - name: Build signed debug APK with embedded JVM
         working-directory: android
         run: gradle --no-daemon --stacktrace :app:assembleDebug
-      - name: Prepare APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk Hostphone-debug.apk
+      - name: Inspect shipped Android runtime
+        run: |
+          unzip -l android/app/build/outputs/apk/debug/app-debug.apk | grep -E 'runtime25.zip|libhostphone_java.so|classes.dex'
+          cp android/app/build/outputs/apk/debug/app-debug.apk Hostphone-Real-Engine-arm64.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Hostphone-APK
-          path: Hostphone-debug.apk
+          name: Hostphone-Real-Minecraft-Engine-APK
+          path: Hostphone-Real-Engine-arm64.apk
           retention-days: 30
