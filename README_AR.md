@@ -62,3 +62,8 @@ bash install-termux.sh
 - النسخة دي اختبرنا كود الباك إند واختبارات محلية، لكن لسه محتاجة اختبار دخول فعلي من Java وBedrock على موبايل أندرويد.
 
 للتفاصيل والمصادر والتطوير شوف [README.md](README.md).
+
+
+## نسخة APK تجريبية
+
+أضفنا مشروع أندرويد أصلي في `android/` يتبني من [GitHub Actions](https://github.com/Raco8493/Fast-Client/actions/workflows/build-apk.yml?query=branch%3Aphonecraft-android-host). APK هو واجهة إدارة وتثبيت المحرك؛ **Termux مطلوب** لاستضافة Java فعليًا على الموبايل. خطوات التثبيت من ملف `android/README_AR.md`.

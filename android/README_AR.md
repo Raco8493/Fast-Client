@@ -1,24 +1,32 @@
-# PhoneCraft APK Beta
+# Hostphone — تطبيق استضافة Minecraft على Android
 
-ده APK لواجهة إدارة سيرفر Minecraft على الموبايل. **محتاج Termux** اللي بيشغل محرك Java وPython على نفس الهاتف.
+**Hostphone 1.1 beta**: واجهة حمراء بالطول (Portrait) مع زر «إنشاء سيرفر» في الرئيسية، واختيارات Java + Bedrock، إصدار Minecraft Java، وPaper أو Fabric. أزرار التنقل الدائرية أسفل الشاشة: الرئيسية / إنشاء / السيرفر / إعدادات. عند اتصال المحرك تفتح لوحة السيرفر بنفس الستايل، فيها تشغيل وإيقاف وكونسول وOP والـMods/Plugins والـRAM.
 
-## تحميل الملف
+> التطبيق **ليس** بديلاً عن Termux. ملفات سيرفر Minecraft Java تشتغل فعليًا **على نفس الهاتف** عبر OpenJDK في Termux. GitHub يستضيف المصدر والبناء فقط. Bedrock تدخل نفس عالم Java باستخدام Geyser + Floodgate، وليست نسخة Mojang Bedrock Dedicated Server مستقلة. Forge/Folia يظهران في قائمة الأنواع مع توضيح أنهما غير مدعومين حاليًا، ولا يمكن اختيارهما. أول استخدام يحتاج إنترنت.
 
-افتح https://github.com/Raco8493/Fast-Client/actions/workflows/build-apk.yml?query=branch%3Aphonecraft-android-host
+## الحصول على APK
 
-اختار آخر تشغيل ناجح (علامة خضراء)، ثم تحت **Artifacts** نزل **PhoneCraft-Host-APK**، فك ملف ZIP وثبّت **PhoneCraft-Host-debug.apk** على Android.
+- افتح https://github.com/Raco8493/Fast-Client/actions/workflows/build-apk.yml?query=branch%3Aphonecraft-android-host
+- اختر آخر Build ناجح ثم Artifact باسم **Hostphone-APK**.
+- فك الملف ZIP وثبت `Hostphone-debug.apk` على الموبايل.
 
-## أول تشغيل
+## استعمال التطبيق
 
-1. نزّل Termux من https://f-droid.org/packages/com.termux/ وافتحه مرة.
-2. من PhoneCraft اضغط نسخ أمر الربط، افتح Termux، الصق الأمر واضغط Enter. ده يفعل allow-external-apps=true.
-3. من PhoneCraft اطلب إذن Run commands in Termux environment. لو مش ظاهر: إعدادات التطبيقات > PhoneCraft > Permissions > Additional permissions.
-4. اضغط تثبيت المحرك. تابع شاشة Termux لحد انتهاء التنزيل والتثبيت.
-5. اضغط تشغيل المحرك وارجع من Termux إلى PhoneCraft، ثم افتح لوحة التحكم.
-6. اختار Paper للـPlugins أو Fabric للمودات، وافق بنفسك على EULA، واضغط تثبيت Minecraft server، وبعدها Start.
+1. افتح **Hostphone** واضغط الزر الأحمر «إنشاء سيرفر» في وسط الرئيسية.
+2. اختر اسم السيرفر، **Java + Bedrock** أو Java فقط أو Bedrock عبر Geyser، وإصدار Minecraft Java، ثم **Paper** أو **Fabric**.
+3. اضغط متابعة. إذا المحرك لم يثبت بعد، ستظهر صفحة إعداد Termux خطوة بخطوة.
+4. نزّل [Termux من F-Droid](https://f-droid.org/packages/com.termux/) وافتحه مرة، وفعّل الإذن بعد تنفيذ أمر الربط المنسوخ من التطبيق، ثم «تثبيت المحرك» وبعد انتهاء التثبيت «تشغيل المحرك».
+5. ارجع واضغط «المحرك شغّال؟ كمّل إنشاء السيرفر»، ووافق على [Minecraft EULA](https://aka.ms/MinecraftEULA)، ثم «إنشاء وتثبيت السيرفر».
+6. بعد انتهاء تحميل السيرفر اضغط «تشغيل». لو دي أول مرة مع Geyser اعمل Stop ثم Start مرة ثانية.
 
-**تنبيه:** مفيش APK مستقل فيه Java server جاهز بدون Termux؛ الموبايل نفسه هو المستضيف. تعطيل Battery optimization مهم لكنه لا يضمن استمرار السيرفر في الخلفية. النسخة تجريبية، ولسه محتاجة اختبار على أندرويد فعلي.
+**ملاحظات**: النسخة التجريبية لا تضمن دعم كل إصدار أو كل مود. تنزيل ملفات السيرفر من الجهات الرسمية قد يفشل لو النسخة غير متاحة. Paper للإضافات Plugins، Fabric للمودات server-side؛ بعض مودات Fabric تتطلب تعديلات عند اللاعب أو لا تدعم Bedrock. إبقاء Termux شغال وتقليل قيود البطارية يساعدان؛ الأندرويد ممكن يقفله تحت ضغط الحرارة أو البطارية. JAVA TCP 25565 وBedrock UDP 19132 على نفس الواي فاي، ومن الإنترنت الخارجي تحتاج إعدادات الشبكة.
 
-## Dev build
-Gradle 8.10.2 + AGP 8.8.2 + JDK 17 + Android SDK 35:
-`cd android && gradle :app:assembleDebug`
+## البناء
+
+Android Java بدون AndroidX. `android/app/build.gradle` يستخدم Gradle 8.10.2 / AGP 8.8.2 وSDK 35. أمر البناء داخل مجلد `android`:
+
+```bash
+gradle --no-daemon :app:assembleDebug
+```
+
+ملف APK موقّع بمفتاح Debug تجريبي. أزل النسخة السابقة عند وجود تعارض بالتوقيع.

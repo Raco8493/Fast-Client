@@ -28,6 +28,15 @@ class ConfigurationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 pc.HOST.set_config(invalid)
 
+    def test_version_change_and_separate_worlds(self):
+        pc.HOST.set_config({'version': '1.21.11', 'mode': 'fabric', 'server_name': 'My Server'})
+        self.assertEqual(pc.HOST.config['version'], '1.21.11')
+        self.assertNotEqual(pc.profile_dir('fabric', '1.21.11'), pc.profile_dir('fabric', '26.3'))
+        with self.assertRaises(ValueError):
+            pc.HOST.set_config({'version': '../../bad'})
+        with self.assertRaises(ValueError):
+            pc.HOST.set_config({'server_name': ''})
+
     def test_safe_filenames(self):
         self.assertTrue(pc.is_safe_filename('Geyser-Fabric.jar'))
         self.assertFalse(pc.is_safe_filename('../evil.jar'))

@@ -29,12 +29,16 @@ ROOT = Path(__file__).resolve().parent
 HOME = Path(os.environ.get('PHONECRAFT_HOME', str(Path.home() / '.phonecraft'))).expanduser()
 HOME.mkdir(parents=True, exist_ok=True)
 CONFIG_FILE = HOME / 'config.json'
-MC_VERSION = '26.3'  # compatible with Geyser at the time this project was created
+MC_VERSION = '26.3'
+# Curated Java versions presented by the Android wizard. Availability is checked
+# against the official Paper/Fabric APIs at installation time.
+SUPPORTED_VERSIONS = ('26.3', '1.21.11', '1.21.10', '1.21.8', '1.21.4', '1.20.6')
 API_USER_AGENT = 'PhoneCraft-Android-Host/1.0 (https://github.com/Raco8493)'
 DEFAULTS = {
     'mode': 'paper', 'ram_percent': 75, 'cpu_percent': 90,
     'max_players': 10, 'view_distance': 6, 'simulation_distance': 4,
     'java_port': 25565, 'bedrock_port': 19132, 'version': MC_VERSION,
+    'server_name': 'Hostphone Server',
 }
 
 
@@ -52,8 +56,10 @@ def save_config(c):
     os.replace(temp, CONFIG_FILE)
 
 
-def profile_dir(mode):
-    return HOME / 'servers' / mode
+def profile_dir(mode, version=MC_VERSION):
+    # Preserve existing server data for old installations of the default version.
+    suffix = mode if version == MC_VERSION else f'{mode}-{version}'
+    return HOME / 'servers' / suffix
 
 
 def mem_kib():
@@ -165,10 +171,10 @@ class Host:
         return self.process is not None and self.process.poll() is None
 
     def directory(self):
-        return profile_dir(self.config['mode'])
+        return profile_dir(self.config['mode'], self.config['version'])
 
     def set_config(self, changes):
-        valid = {'mode': ('paper', 'fabric')}
+        valid = {'mode': ('paper', 'fabric'), 'version': SUPPORTED_VERSIONS}
         nums = {'ram_percent': (30, 85), 'cpu_percent': (25, 100),
                 'max_players': (1, 100), 'view_distance': (2, 16),
                 'simulation_distance': (2, 12)}
@@ -179,6 +185,9 @@ class Host:
                 if k in valid:
                     if value not in valid[k]:
                         raise ValueError('نوع السيرفر غير مدعوم')
+                elif k == 'server_name':
+                    if not isinstance(value, str) or not (1 <= len(value.strip()) <= 40) or any(ord(c) < 32 for c in value):
+                        raise ValueError('اسم السيرفر لازم يكون بين 1 و40 حرف')
                 elif k in nums:
                     if not isinstance(value, int) or isinstance(value, bool) or not (nums[k][0] <= value <= nums[k][1]):
                         raise ValueError('قيمة غير مسموح بيها: ' + k)
@@ -196,23 +205,24 @@ class Host:
                 raise RuntimeError('فيه سيرفر شغال أو تثبيت جاري')
             self.installing = True
             mode = self.config['mode']
+            version = self.config['version']
             self.last_error = ''
-        threading.Thread(target=self._install, args=(mode,), daemon=True).start()
+        threading.Thread(target=self._install, args=(mode, version), daemon=True).start()
 
-    def _install(self, mode):
-        dest = profile_dir(mode)
+    def _install(self, mode, version):
+        dest = profile_dir(mode, version)
         dest.mkdir(parents=True, exist_ok=True)
         try:
             if shutil.which('java') is None:
                 raise RuntimeError('لازم تثبت Java 25 من Termux: pkg install openjdk-25')
             if mode == 'paper':
-                self.log_line('بنجيب آخر إصدار مستقر لـPaper 26.3...')
-                builds = get_json('https://fill.papermc.io/v3/projects/paper/versions/26.3/builds')
+                self.log_line(f'بنجيب إصدار Paper {version} المستقر...')
+                builds = get_json(f'https://fill.papermc.io/v3/projects/paper/versions/{version}/builds')
                 if not isinstance(builds, list):
                     raise RuntimeError('رد خدمة Paper غير متوقع')
                 stable = next((b for b in builds if b.get('channel') == 'STABLE'), None)
                 if stable is None:
-                    raise RuntimeError('مفيش نسخة Paper STABLE متاحة لـ26.3')
+                    raise RuntimeError(f'مفيش نسخة Paper مستقرة للإصدار {version}. اختار إصدار تاني.')
                 jar = stable['downloads']['server:default']
                 download(jar['url'], dest / 'server.jar', jar.get('checksums', {}).get('sha256'))
                 plug = dest / 'plugins'
@@ -222,18 +232,20 @@ class Host:
                     url = f'https://download.geysermc.org/v2/projects/{project}/versions/latest/builds/latest/downloads/spigot'
                     download(url, plug / name)
             else:
-                self.log_line('بنثبّت Fabric 26.3...')
+                self.log_line(f'بنثبّت Fabric {version}...')
                 loader_list = get_json('https://meta.fabricmc.net/v2/versions/loader')
                 installer_list = get_json('https://meta.fabricmc.net/v2/versions/installer')
                 loader = next(x['version'] for x in loader_list if x.get('stable'))
                 installer = next(x['version'] for x in installer_list if x.get('stable'))
-                url = f'https://meta.fabricmc.net/v2/versions/loader/26.3/{loader}/{installer}/server/jar'
+                url = f'https://meta.fabricmc.net/v2/versions/loader/{version}/{loader}/{installer}/server/jar'
                 download(url, dest / 'server.jar')
                 moddir = dest / 'mods'
                 moddir.mkdir(exist_ok=True)
-                for slug, name in [('fabric-api', 'fabric-api.jar'), ('floodgate', 'floodgate-fabric.jar')]:
-                    self.log_line('تحميل ' + name)
-                    install_modrinth(slug, MC_VERSION, moddir / name)
+                self.log_line('تحميل Fabric API للإصدار ' + version)
+                install_modrinth('fabric-api', version, moddir / 'fabric-api.jar')
+                self.log_line('تحميل Floodgate-Fabric.jar')
+                download('https://download.geysermc.org/v2/projects/floodgate/versions/latest/builds/latest/downloads/fabric',
+                         moddir / 'Floodgate-Fabric.jar')
                 self.log_line('تحميل Geyser-Fabric.jar')
                 download('https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/fabric',
                          moddir / 'Geyser-Fabric.jar')
@@ -260,7 +272,7 @@ class Host:
             'simulation-distance': c['simulation_distance'],
             'enable-command-block': 'true',
             'server-ip': '',
-            'motd': 'PhoneCraft Android Host - Java + Bedrock',
+            'motd': c.get('server_name', 'Hostphone Server'),
         }
         for k, v in values.items():
             set_property(props, k, v)
@@ -341,7 +353,7 @@ class Host:
                 raise RuntimeError('مفيش سيرفر متثبت')
             backupdir = HOME / 'backups'
             backupdir.mkdir(parents=True, exist_ok=True)
-            target = backupdir / f'{self.config["mode"]}-{datetime.now().strftime("%Y%m%d-%H%M%S")}.zip'
+            target = backupdir / f'{self.config["mode"]}-{self.config["version"]}-{datetime.now().strftime("%Y%m%d-%H%M%S")}.zip'
             include_dirs = ('world', 'world_nether', 'world_the_end')
             include_files = ('server.properties', 'ops.json', 'whitelist.json', 'banned-players.json')
             with zipfile.ZipFile(target, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=4) as z:

@@ -1,199 +1,280 @@
 package com.phonecraft.host;
 
+import android.Manifest;
 import android.app.Activity;
-import android.content.*;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
-import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
-import android.os.*;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
-import android.view.*;
-import android.webkit.*;
-import android.widget.*;
-import java.net.*;
+import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.Toast;
+
 import org.json.JSONObject;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+/** The Android APK is the controller. Actual server bytes run inside Termux on this phone. */
 public class MainActivity extends Activity {
-    private static final String HOST = "http://127.0.0.1:8765/";
     private static final String PERMISSION = "com.termux.permission.RUN_COMMAND";
-    private static final String REPO = "https://github.com/Raco8493/Fast-Client.git";
-    private TextView status;
-    private WebView browser;
-    private LinearLayout screen;
-    private ValueCallback<Uri[]> chooser;
-    private final Handler handler = new Handler(Looper.getMainLooper());
-    private boolean panel = false;
-    private boolean alive = true;
-    private static final int PICK_JAR = 302;
-    private static final String ENABLE =
-        "mkdir -p ~/.termux && touch ~/.termux/termux.properties && sed -i '/^allow-external-apps=/d' ~/.termux/termux.properties && printf 'allow-external-apps=true\\n' >> ~/.termux/termux.properties && termux-reload-settings";
+    private static final String TERMUX_HOME = "/data/data/com.termux/files/home";
+    private static final String TERMUX_BASH = "/data/data/com.termux/files/usr/bin/bash";
+    private static final String PANEL = "http://127.0.0.1:8765/";
+    private static final String HOME = "file:///android_asset/launcher.html";
+    private static final String REPO = "https://github.com/Raco8493/Fast-Client";
+    private static final String BRANCH = "phonecraft-android-host";
+    private static final String SETUP_COMMAND = "mkdir -p ~/.termux && touch ~/.termux/termux.properties && sed -i '/^allow-external-apps=/d' ~/.termux/termux.properties && printf 'allow-external-apps=true\\n' >> ~/.termux/termux.properties && termux-reload-settings";
 
-    @Override public void onCreate(Bundle state) {
-        super.onCreate(state);
-        getWindow().setStatusBarColor(Color.rgb(10,14,22));
-        getWindow().setNavigationBarColor(Color.rgb(10,14,22));
-        home();
-    }
-    private GradientDrawable bg(int color, int stroke) {
-        GradientDrawable g = new GradientDrawable();
-        g.setColor(color); g.setCornerRadius(dp(16));
-        g.setStroke(dp(1), stroke); return g;
-    }
-    private int dp(int x) { return Math.round(x * getResources().getDisplayMetrics().density); }
-    private TextView text(String s, int size, boolean bold) {
-        TextView t = new TextView(this); t.setText(s); t.setTextColor(Color.WHITE);
-        t.setTextSize(size); t.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);
-        if (bold) t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        return t;
-    }
-    private void card(String heading, String description, String[][] actions) {
-        LinearLayout c = new LinearLayout(this);
-        c.setOrientation(LinearLayout.VERTICAL); c.setPadding(dp(18),dp(16),dp(18),dp(18));
-        c.setBackground(bg(Color.rgb(21,28,40), Color.rgb(44,55,72)));
-        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-1,-2); cp.bottomMargin=dp(12); screen.addView(c,cp);
-        TextView t=text(heading,18,true); c.addView(t);
-        TextView d=text(description,13,false); d.setTextColor(Color.rgb(183,196,207));
-        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2); p.topMargin=dp(8); p.bottomMargin=dp(12); c.addView(d,p);
-        for(String[] action:actions) {
-            Button b = new Button(this);
-            b.setAllCaps(false); b.setText(action[0]); b.setTextColor(Color.WHITE);
-            b.setBackground(bg(action[2].equals("1")?Color.rgb(184,49,74):Color.rgb(39,59,77), Color.rgb(69,86,102)));
-            LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(-1, dp(49)); bp.topMargin=dp(8); c.addView(b,bp);
-            b.setOnClickListener(v -> onAction(action[1]));
+    private WebView webView;
+    private boolean panelShowing = false;
+    private boolean active = true;
+    private ValueCallback<Uri[]> fileChooser;
+    private static final int PICK_FILE = 301;
+    private final ExecutorService io = Executors.newSingleThreadExecutor();
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable poll = new Runnable() {
+        @Override public void run() {
+            if (active) {
+                if (!panelShowing) checkStatus();
+                handler.postDelayed(this, 4500);
+            }
         }
-    }
-    private void home() {
-        panel=false;
-        ScrollView scroll = new ScrollView(this); scroll.setFillViewport(true); scroll.setBackgroundColor(Color.rgb(10,14,22));
-        screen=new LinearLayout(this); screen.setOrientation(LinearLayout.VERTICAL);
-        screen.setPadding(dp(18),dp(23),dp(18),dp(36)); screen.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        scroll.addView(screen);
-        TextView h=text("⛏  PhoneCraft",31,true); h.setTextColor(Color.rgb(254,121,139)); screen.addView(h);
-        TextView sub=text("Minecraft Java + Bedrock | جهازك هو السيرفر",14,false);
-        sub.setTextColor(Color.rgb(194,199,218)); screen.addView(sub);
-        status=text("● جاري فحص محرك السيرفر...",14,true);
-        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(-1,-2); sp.topMargin=dp(14); sp.bottomMargin=dp(20); screen.addView(status,sp);
-        card("🎮 إدارة السيرفر", "الموبايل هو المستضيف الفعلي. شغّل محرك Termux، وبعدين افتح لوحة التحكم للـOP والـMods والـCommands.",new String[][]{
-            {"فتح لوحة التحكم", "panel","1"}, {"تحديث الحالة","refresh","0"}
-        });
-        card("① ثبّت Termux واضبط الربط", "نزّل Termux المجاني وافتحه مرة. انسخ أمر السماح بالربط والصقه في Termux واضغط Enter.",new String[][]{
-            {"تحميل Termux", "download","0"},{"نسخ أمر الربط", "copy","0"},{"فتح Termux", "termux","0"}
-        });
-        card("② امنح صلاحية التشغيل", "من إعدادات PhoneCraft، اسمح بـ Run commands in Termux environment تحت Additional permissions.",new String[][]{
-            {"طلب الإذن","permission","1"},{"إعدادات التطبيق","settings","0"}
-        });
-        card("③ تثبيت محرك PhoneCraft", "اضغط تثبيت أول مرة. هيحمّل المشروع وJava وPython على نفس الموبايل عبر Termux. استنى نجاح التثبيت في شاشة Termux.",new String[][]{
-            {"تثبيت المحرك","install","1"},{"تشغيل المحرك","start","0"}
-        });
-        card("④ اصنع عالمك", "افتح لوحة التحكم، اختار Paper للـPlugins أو Fabric للمودات، وافق على EULA، ثم ثبّت السيرفر وشغّله.",new String[][]{
-            {"لوحة الإدارة","panel","1"},{"كود GitHub","repo","0"}
-        });
-        TextView warning=text("تنبيه: الـAPK واجهة حقيقية، لكن تشغيل سيرفر Java نفسه يعتمد على Termux. عطّل تحسين البطارية لـTermux. عند السخونة أو قفل أندرويد للخدمة ممكن السيرفر يقف.",12,false);
-        warning.setTextColor(Color.rgb(235,177,137)); screen.addView(warning);
-        setContentView(scroll);
-        refresh();
-    }
-    private void toast(String s) { Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
-    private void external(String url) { try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}catch(Exception e){toast("مش قادر أفتح الرابط");} }
-    private boolean hasTermux() {
-        try { getPackageManager().getPackageInfo("com.termux",0); return true; }
-        catch (PackageManager.NameNotFoundException e) { return false; }
-    }
-    private void requestRunPermission() {
-        if(!hasTermux()){toast("نزّل Termux الأول"); return;}
-        if (checkSelfPermission(PERMISSION)!=PackageManager.PERMISSION_GRANTED) requestPermissions(new String[]{PERMISSION},123);
-        else toast("الإذن متاح. اتأكد من allow-external-apps=true جوه Termux.");
-    }
-    private void runTermux(String cmd, String title) {
-        if(!hasTermux()){toast("ثبّت Termux الأول من F-Droid"); return;}
-        if(checkSelfPermission(PERMISSION)!=PackageManager.PERMISSION_GRANTED){requestRunPermission(); toast("بعد منح الإذن اضغط الزر تاني"); return;}
-        try {
-            Intent i = new Intent("com.termux.RUN_COMMAND");
-            i.setClassName("com.termux","com.termux.app.RunCommandService");
-            i.putExtra("com.termux.RUN_COMMAND_PATH","/data/data/com.termux/files/usr/bin/bash");
-            i.putExtra("com.termux.RUN_COMMAND_ARGUMENTS",new String[]{"-lc",cmd});
-            i.putExtra("com.termux.RUN_COMMAND_WORKDIR","/data/data/com.termux/files/home");
-            i.putExtra("com.termux.RUN_COMMAND_BACKGROUND",false);
-            i.putExtra("com.termux.RUN_COMMAND_SESSION_ACTION","0");
-            i.putExtra("com.termux.RUN_COMMAND_LABEL",title);
-            startService(i);
-            toast(title+" — تابع شاشة Termux");
-        } catch(Exception e){toast("فشل الربط مع Termux: "+e.getClass().getSimpleName());}
-    }
-    private void onAction(String a) {
-        switch(a) {
-            case "download":external("https://f-droid.org/packages/com.termux/");break;
-            case "copy":
-                ((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("PhoneCraft",ENABLE));
-                toast("تم نسخ الأمر؛ الصقه جوه Termux");break;
-            case "termux":
-                if(!hasTermux()){external("https://f-droid.org/packages/com.termux/");break;}
-                Intent open=getPackageManager().getLaunchIntentForPackage("com.termux");
-                if(open!=null)startActivity(open);else toast("افتح Termux من التطبيقات");break;
-            case "permission":requestRunPermission();break;
-            case "settings":startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+getPackageName())));break;
-            case "install":
-                runTermux("set -e; pkg update -y && pkg install -y git && (if [ -d \"$HOME/PhoneCraft-Android-Host/.git\" ]; then git -C \"$HOME/PhoneCraft-Android-Host\" pull --ff-only; else git clone --depth 1 -b phonecraft-android-host "+REPO+" \"$HOME/PhoneCraft-Android-Host\"; fi) && bash \"$HOME/PhoneCraft-Android-Host/install-termux.sh\" && echo 'PhoneCraft installed - return to APK and tap Start Engine'","تثبيت محرك PhoneCraft");break;
-            case "start":
-                runTermux("if [ -f \"$HOME/phonecraft-start\" ]; then bash \"$HOME/phonecraft-start\"; else echo 'Install engine first'; fi","تشغيل محرك PhoneCraft");break;
-            case "panel":openPanel();break;
-            case "refresh":refresh();break;
-            case "repo":external("https://github.com/Raco8493/Fast-Client/tree/phonecraft-android-host");break;
-        }
-    }
-    private void refresh() {
-        if(panel||status==null)return;
-        new Thread(() -> {
-            String st="● المحرك مش شغال — اضغط تشغيل المحرك";
-            HttpURLConnection c=null;
-            try {
-                c=(HttpURLConnection)new URL(HOST+"api/status").openConnection();
-                c.setConnectTimeout(1500); c.setReadTimeout(1500);
-                if(c.getResponseCode()==200){
-                    java.io.ByteArrayOutputStream buf=new java.io.ByteArrayOutputStream();
-                    try(java.io.InputStream in=c.getInputStream()){byte[] block=new byte[4096];int n;while((n=in.read(block))>0 && buf.size()<150000)buf.write(block,0,n);}
-                    JSONObject obj=new JSONObject(buf.toString("UTF-8"));
-                    st=obj.optBoolean("running")?"● سيرفر Minecraft شغال":"● لوحة PhoneCraft شغالة؛ جاهزة للإعداد";
-                }
-            }catch(Exception ignored){}finally{if(c!=null)c.disconnect();}
-            final String message=st;
-            runOnUiThread(() -> { if(!panel && status!=null) {status.setText(message);status.setTextColor(message.contains("شغال")?Color.rgb(90,226,155):Color.rgb(244,177,164));}});
-        }).start();
-    }
-    private void openPanel() {
-        panel=true;
-        browser=new WebView(this);
-        browser.setBackgroundColor(Color.rgb(10,14,22));
-        browser.getSettings().setJavaScriptEnabled(true);
-        browser.getSettings().setDomStorageEnabled(true);
-        browser.setWebViewClient(new WebViewClient(){
-            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request){
-                Uri u=request.getUrl();
-                if("http".equals(u.getScheme()) && "127.0.0.1".equals(u.getHost()) && u.getPort()==8765)return false;
-                if("https".equals(u.getScheme()))external(u.toString());
+    };
+
+    @Override public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        getWindow().setStatusBarColor(0xFF190D18);
+        getWindow().setNavigationBarColor(0xFF160A13);
+        webView = new WebView(this);
+        webView.setBackgroundColor(0xFF09090D);
+        webView.getSettings().setJavaScriptEnabled(true);
+        webView.getSettings().setDomStorageEnabled(true);
+        webView.getSettings().setAllowFileAccess(false);
+        webView.getSettings().setAllowContentAccess(true);
+        webView.setWebViewClient(new WebViewClient() {
+            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri u = request.getUrl();
+                if (isTrusted(u)) return false;
+                if ("https".equals(u.getScheme())) openUrl(u.toString());
                 return true;
             }
         });
-        browser.setWebChromeClient(new WebChromeClient(){
-            @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> cb, FileChooserParams params){
-                if(chooser!=null)chooser.onReceiveValue(null);
-                chooser=cb;
-                try {Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("*/*");startActivityForResult(i,PICK_JAR);return true;}
-                catch(Exception e){chooser=null;return false;}
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override public boolean onShowFileChooser(WebView w, ValueCallback<Uri[]> cb, FileChooserParams params) {
+                if (fileChooser != null) fileChooser.onReceiveValue(null);
+                fileChooser = cb;
+                try {
+                    Intent choose = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                    choose.addCategory(Intent.CATEGORY_OPENABLE);
+                    choose.setType("*/*");
+                    startActivityForResult(choose, PICK_FILE);
+                    return true;
+                } catch (Exception e) {
+                    fileChooser = null;
+                    return false;
+                }
             }
         });
-        setContentView(browser);
-        browser.loadUrl(HOST);
+        setContentView(webView);
+        goHome();
+        handler.postDelayed(poll, 900);
     }
-    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data) {
-        super.onActivityResult(requestCode,resultCode,data);
-        if(requestCode==PICK_JAR && chooser!=null) {chooser.onReceiveValue(resultCode==RESULT_OK && data!=null && data.getData()!=null?new Uri[]{data.getData()}:null);chooser=null;}
+
+    private boolean isTrusted(Uri u) {
+        return ("http".equals(u.getScheme()) && "127.0.0.1".equals(u.getHost()) && u.getPort() == 8765)
+            || ("file".equals(u.getScheme()) && "/android_asset/launcher.html".equals(u.getPath()));
     }
+
+    private void goHome() {
+        panelShowing = false;
+        webView.addJavascriptInterface(new Bridge(), "PhoneCraft");
+        webView.loadUrl(HOME);
+    }
+
+    private void openPanel() { openPanelPath(""); }
+
+    private void openPanelPath(String suffix) {
+        panelShowing = true;
+        webView.removeJavascriptInterface("PhoneCraft");
+        webView.loadUrl(PANEL + suffix);
+    }
+
+    private void checkStatus() {
+        io.execute(() -> {
+            JSONObject result = new JSONObject();
+            HttpURLConnection con = null;
+            try {
+                con = (HttpURLConnection)new URL(PANEL + "api/status").openConnection();
+                con.setConnectTimeout(1400);
+                con.setReadTimeout(1600);
+                if (con.getResponseCode() != 200) throw new Exception("Panel unavailable");
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                try (InputStream in = con.getInputStream()) {
+                    byte[] bytes = new byte[4096];
+                    int n;
+                    while ((n = in.read(bytes)) != -1) {
+                        stream.write(bytes, 0, n);
+                        if (stream.size() > 1024 * 1024) throw new Exception("Response too big");
+                    }
+                }
+                result = new JSONObject(stream.toString("UTF-8"));
+                result.put("available", true);
+            } catch (Exception ignored) {
+                try { result.put("available", false); } catch (Exception e) { /* ignore */ }
+            } finally { if (con != null) con.disconnect(); }
+            final String data = result.toString();
+            handler.post(() -> {
+                if (active && !panelShowing) webView.evaluateJavascript("window.setPhoneCraftStatus(" + data + ")", null);
+            });
+        });
+    }
+
+    private void openUrl(String uri) {
+        try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(uri))); }
+        catch (Exception e) { message("مافيش متصفح قادر يفتح الرابط"); }
+    }
+
+    private void message(String text) { Toast.makeText(this, text, Toast.LENGTH_LONG).show(); }
+
+    private boolean hasTermux() {
+        try { getPackageManager().getPackageInfo("com.termux", 0); return true; }
+        catch (PackageManager.NameNotFoundException e) { return false; }
+    }
+
+    private void requirePermission() {
+        if (!hasTermux()) { message("نزّل Termux الأول من F-Droid"); openUrl("https://f-droid.org/packages/com.termux/"); return; }
+        if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(PERMISSION) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{PERMISSION}, 101);
+            return;
+        }
+        message("التصريح موجود. اتأكد كمان إن allow-external-apps=true في Termux.");
+    }
+
+    private void runInTermux(String command, boolean foreground, String label) {
+        if (!hasTermux()) { message("لازم تثبّت Termux الأول"); return; }
+        if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(PERMISSION) != PackageManager.PERMISSION_GRANTED) {
+            requirePermission();
+            message("بعد السماح بالتصريح، اضغط الزر مرة تانية");
+            return;
+        }
+        try {
+            Intent intent = new Intent("com.termux.RUN_COMMAND");
+            intent.setClassName("com.termux", "com.termux.app.RunCommandService");
+            intent.putExtra("com.termux.RUN_COMMAND_PATH", TERMUX_BASH);
+            intent.putExtra("com.termux.RUN_COMMAND_ARGUMENTS", new String[]{"-lc", command});
+            intent.putExtra("com.termux.RUN_COMMAND_WORKDIR", TERMUX_HOME);
+            intent.putExtra("com.termux.RUN_COMMAND_BACKGROUND", !foreground);
+            intent.putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0");
+            intent.putExtra("com.termux.RUN_COMMAND_LABEL", label);
+            startService(intent);
+            message(label + " — تابع Termux للنتيجة");
+        } catch (SecurityException e) {
+            message("افتح إعدادات التطبيق وامنح Run commands in Termux environment");
+        } catch (Exception e) {
+            message("تعذر تشغيل Termux: " + e.getClass().getSimpleName());
+        }
+    }
+
+    public class Bridge {
+        @JavascriptInterface public void copySetup() {
+            runOnUiThread(() -> {
+                ClipboardManager clipboard = (ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
+                clipboard.setPrimaryClip(ClipData.newPlainText("Termux configuration", SETUP_COMMAND));
+                message("الأمر اتنسخ. الصقه في Termux واضغط Enter.");
+            });
+        }
+        @JavascriptInterface public void openTermux() {
+            runOnUiThread(() -> {
+                if (!hasTermux()) { openUrl("https://f-droid.org/packages/com.termux/"); return; }
+                Intent launch = getPackageManager().getLaunchIntentForPackage("com.termux");
+                if (launch != null) startActivity(launch);
+                else message("افتح Termux من شاشة التطبيقات");
+            });
+        }
+        @JavascriptInterface public void permission() { runOnUiThread(() -> requirePermission()); }
+        @JavascriptInterface public void appSettings() {
+            runOnUiThread(() -> {
+                Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()));
+                startActivity(i);
+            });
+        }
+        @JavascriptInterface public void install() {
+            runOnUiThread(() -> {
+                String folder = "$HOME/PhoneCraft-Android-Host";
+                String cmd = "set -e; pkg update -y && pkg install -y git && "
+                    + "(if [ -d \"" + folder + "/.git\" ]; then git -C \"" + folder + "\" pull --ff-only; "
+                    + "else git clone --depth 1 -b " + BRANCH + " " + REPO + ".git \"" + folder + "\"; fi) && "
+                    + "bash \"" + folder + "/install-termux.sh\" && "
+                    + "echo 'PhoneCraft installed! Return to the PhoneCraft app and tap Start Engine.'";
+                runInTermux(cmd, true, "تثبيت محرك PhoneCraft");
+            });
+        }
+        @JavascriptInterface public void start() {
+            runOnUiThread(() -> runInTermux("if [ -f \"$HOME/phonecraft-start\" ]; then bash \"$HOME/phonecraft-start\"; else echo 'Install PhoneCraft first.'; fi", true, "تشغيل لوحة PhoneCraft"));
+        }
+        @JavascriptInterface public void showPanel() { runOnUiThread(() -> openPanel()); }
+        @JavascriptInterface public void openCreate(String mode, String version, String name) {
+            runOnUiThread(() -> {
+                if (!mode.matches("paper|fabric") ||
+                    !version.matches("26\\.3|1\\.21\\.(11|10|8|4)|1\\.20\\.6") ||
+                    name == null || name.trim().isEmpty() || name.length() > 40) {
+                    message("اختيارات السيرفر مش صحيحة"); return;
+                }
+                try {
+                    String url = "?create=1&mode=" + java.net.URLEncoder.encode(mode, "UTF-8")
+                      + "&version=" + java.net.URLEncoder.encode(version, "UTF-8")
+                      + "&name=" + java.net.URLEncoder.encode(name, "UTF-8");
+                    openPanelPath(url);
+                } catch (Exception e) { message("تعذر فتح صفحة الإنشاء"); }
+            });
+        }
+        @JavascriptInterface public void refresh() { checkStatus(); }
+        @JavascriptInterface public void repo() { runOnUiThread(() -> openUrl(REPO + "/tree/" + BRANCH)); }
+        @JavascriptInterface public void termux() { runOnUiThread(() -> openUrl("https://f-droid.org/packages/com.termux/")); }
+    }
+
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 101 && grantResults.length > 0)
+            message(grantResults[0] == PackageManager.PERMISSION_GRANTED ? "تم منح التصريح" : "امنح التصريح من إعدادات التطبيق > الأذونات الإضافية");
+    }
+
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == PICK_FILE && fileChooser != null) {
+            Uri[] result = resultCode == RESULT_OK && data != null && data.getData() != null
+                ? new Uri[]{data.getData()} : null;
+            fileChooser.onReceiveValue(result);
+            fileChooser = null;
+        }
+    }
+
     @Override public void onBackPressed() {
-        if(panel) {if(browser!=null){browser.destroy();browser=null;} home();}
+        if (panelShowing) goHome();
         else super.onBackPressed();
     }
-    @Override protected void onDestroy() {alive=false;handler.removeCallbacksAndMessages(null);if(browser!=null)browser.destroy();super.onDestroy();}
+
+    @Override protected void onDestroy() {
+        active = false;
+        handler.removeCallbacksAndMessages(null);
+        io.shutdownNow();
+        if (webView != null) webView.destroy();
+        super.onDestroy();
+    }
 }
