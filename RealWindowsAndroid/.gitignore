@@ -1,0 +1,11 @@
+.gradle/
+build/
+**/build/
+*.qcow2
+*.iso
+*.img
+*.apk
+*.aab
+*.keystore
+local.properties
+*.log

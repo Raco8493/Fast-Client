@@ -1,0 +1,4 @@
+The launcher and app code created in this project are provided as an educational prototype.
+QEMU is separate open-source software licensed by its authors; see https://www.qemu.org/.
+Termux is separate open-source software; see https://github.com/termux/termux-app.
+No Microsoft Windows binaries, installation media, product keys, or Visual Studio binaries are bundled.
