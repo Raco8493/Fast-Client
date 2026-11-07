@@ -34,8 +34,8 @@ jobs:
           mkdir -p /tmp/jre-extracted
           tar -xJf /tmp/runtime.tar.xz -C /tmp/jre-extracted
           echo 'Runtime files:'
-          find /tmp/jre-extracted -maxdepth 3 -type f | head -35
-          JAVA_PATH=$(find /tmp/jre-extracted -type f -path '*/bin/java' | head -n1)
+          find /tmp/jre-extracted -maxdepth 2 -type f | sed -n '1,35p'
+          JAVA_PATH=$(find /tmp/jre-extracted -type f -path '*/bin/java' -print -quit)
           test -n "$JAVA_PATH" || { echo 'Missing ARM64 bin/java'; exit 1; }
           JAVA_HOME_PATH=$(dirname "$(dirname "$JAVA_PATH")")
           file "$JAVA_PATH"
