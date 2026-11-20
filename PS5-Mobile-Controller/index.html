@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#10131b">
+  <title>PS5 Mobile Controller</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div><span class="eyebrow">MOBILE GAMEPAD</span><h1>PS5 Controller</h1><p>حوّلي موبايلك لواجهة تحكم</p></div>
+      <span id="status" class="status offline">غير متصل</span>
+    </header>
+    <section class="connect panel">
+      <label for="wsUrl">عنوان وسيط الاتصال WebSocket</label>
+      <div class="connect-row"><input id="wsUrl" value="ws://192.168.1.10:8765" spellcheck="false"><button id="connectBtn">اتصال</button></div>
+      <small>غيّري العنوان لعنوان الجهاز الوسيط على نفس الشبكة.</small>
+    </section>
+    <section class="pad panel" aria-label="أزرار التحكم">
+      <div class="topbar"><span>DUAL CONTROL</span><span class="tiny">TOUCH READY</span></div>
+      <div class="shoulders">
+        <button data-button="l1" class="shoulder">L1</button><button data-button="l2" class="shoulder">L2</button>
+        <span class="spacer"></span><button data-button="r2" class="shoulder">R2</button><button data-button="r1" class="shoulder">R1</button>
+      </div>
+      <div class="controls">
+        <div class="left">
+          <div class="dpad">
+            <button data-button="up" class="up">▲</button>
+            <button data-button="left" class="leftkey">◀</button>
+            <button data-button="right" class="rightkey">▶</button>
+            <button data-button="down" class="down">▼</button>
+          </div>
+          <div class="stick-wrap"><div class="stick-label">L STICK</div><div class="stick" data-stick="left"><div class="knob"></div></div><button data-button="l3" class="stick-click">L3</button></div>
+        </div>
+        <div class="center">
+          <button data-button="create" class="smallkey">CREATE</button>
+          <button data-button="ps" class="pskey">PS</button>
+          <button data-button="options" class="smallkey">OPTIONS</button>
+          <button id="turbo" class="turbo">TURBO: OFF</button>
+        </div>
+        <div class="right">
+          <div class="face">
+            <button data-button="triangle" class="tri">△</button>
+            <button data-button="square" class="sqr">□</button>
+            <button data-button="circle" class="cir">○</button>
+            <button data-button="cross" class="crs">×</button>
+          </div>
+          <div class="stick-wrap"><div class="stick-label">R STICK</div><div class="stick" data-stick="right"><div class="knob"></div></div><button data-button="r3" class="stick-click">R3</button></div>
+        </div>
+      </div>
+      <div class="footer-pad"><span>HOLD TO PRESS</span><span>RELEASE TO STOP</span></div>
+    </section>
+    <footer>تنبيه: الواجهة ترسل أوامر للوسيط فقط؛ توصيلها الفعلي بـ PS5 يحتاج مستقبلًا متوافقًا.</footer>
+  </main>
+  <script src="controller.js"></script>
+</body>
+</html>
